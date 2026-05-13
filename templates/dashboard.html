@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+/* Mini sparkline canvas */
+.sparkline-canvas {
+  display: block;
+}
+
+/* Pulse dot */
+.pulse-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--gain);
+  position: relative;
+}
+.pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid var(--gain);
+  animation: pulse 2s ease-out infinite;
+}
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2); opacity: 0; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen bg-vault-950">
+  {% include 'sidebar.html' %}
+
+  <!-- Main content -->
+  <main class="flex-1 ml-64">
+    <!-- Top bar -->
+    <header class="sticky top-0 z-20 bg-vault-950/80 backdrop-blur-xl border-b border-vault-700 px-8 py-4 flex items-center justify-between">
+      <div>
+        <h2 class="font-display text-xl font-bold">Dashboard</h2>
+        <p class="text-vault-400 text-sm">My Portfolio — {{ portfolio.name }}</p>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="relative">
+          <input type="text" class="vault-input pl-10 pr-4 py-2.5 rounded-xl text-sm w-64" placeholder="Search assets..." aria-label="Search assets">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-vault-500 text-xs"></i>
+        </div>
+        <a href="{{ url_for('add_entry') }}" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-display inline-block">
+          <span class="flex items-center gap-2"><i class="fa-solid fa-plus text-xs"></i> Add Entry</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="p-8">
+      <!-- Stat Cards -->
+      <div class="grid grid-cols-4 gap-5 mb-8">
+        <div class="glass-card stat-card rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-vault-400 text-sm">Total Value</span>
+            <div class="w-9 h-9 rounded-xl bg-amber/10 flex items-center justify-center">
+              <i class="fa-solid fa-wallet text-amber text-sm"></i>
+            </div>
+          </div>
+          <p class="font-display text-2xl font-bold">${{ "{:,.2f}".format(portfolio.total_value) }}</p>
+          <div class="flex items-center gap-2 mt-2">
+            <span class="badge badge-gain text-xs"><i class="fa-solid fa-arrow-up text-[10px] mr-1"></i>12.4%</span>
+            <span class="text-vault-500 text-xs">vs last month</span>
+          </div>
+        </div>
+
+        <div class="glass-card stat-card rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-vault-400 text-sm">Total Gain</span>
+            <div class="w-9 h-9 rounded-xl bg-gain/10 flex items-center justify-center">
+              <i class="fa-solid fa-trending-up text-gain text-sm"></i>
+            </div>
+          </div>
+          <p class="font-display text-2xl font-bold text-gain">+${{ "{:,.2f}".format(portfolio.total_gain) }}</p>
+          <div class="flex items-center gap-2 mt-2">
+            <span class="badge badge-gain text-xs"><i class="fa-solid fa-arrow-up text-[10px] mr-1"></i>12.4%</span>
+            <span class="text-vault-500 text-xs">all time</span>
+          </div>
+        </div>
+
+        <div class="glass-card stat-card rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-vault-400 text-sm">Today's P&L</span>
+            <div class="w-9 h-9 rounded-xl bg-gain/10 flex items-center justify-center">
+              <i class="fa-solid fa-bolt text-gain text-sm"></i>
+            </div>
+          </div>
+          <p class="font-display text-2xl font-bold text-gain">+${{ "{:,.2f}".format(portfolio.todays_pl) }}</p>
+          <div class="flex items-center gap-2 mt-2">
+            <span class="badge badge-gain text-xs"><i class="fa-solid fa-arrow-up text-[10px] mr-1"></i>0.31%</span>
+            <span class="text-vault-500 text-xs">intraday</span>
+          </div>
+        </div>
+
+        <div class="glass-card stat-card rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-vault-400 text-sm">Holdings</span>
+            <div class="w-9 h-9 rounded-xl bg-vault-700/50 flex items-center justify-center">
+              <i class="fa-solid fa-layer-group text-vault-300 text-sm"></i>
+            </div>
+          </div>
+          <p class="font-display text-2xl font-bold">{{ holdings|length }}</p>
+          <div class="flex items-center gap-2 mt-2">
+            <span class="text-vault-500 text-xs">across categories</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart + Allocation -->
+      <div class="grid grid-cols-3 gap-5 mb-8">
+        <!-- Performance Chart -->
+        <div class="col-span-2 glass-card rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="font-display font-semibold">Performance</h3>
+              <p class="text-vault-400 text-sm">Portfolio value over time</p>
+            </div>
+            <div class="flex gap-1 bg-vault-800 rounded-xl p-1" id="chart-range-btns">
+              <button onclick="setChartRange(this, '1W')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-vault-400 hover:text-vault-200 transition-colors">1W</button>
+              <button onclick="setChartRange(this, '1M')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber/15 text-amber">1M</button>
+              <button onclick="setChartRange(this, '3M')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-vault-400 hover:text-vault-200 transition-colors">3M</button>
+              <button onclick="setChartRange(this, '1Y')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-vault-400 hover:text-vault-200 transition-colors">1Y</button>
+              <button onclick="setChartRange(this, 'ALL')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-vault-400 hover:text-vault-200 transition-colors">ALL</button>
+            </div>
+          </div>
+          <canvas id="performanceChart" class="w-full" height="260"></canvas>
+        </div>
+
+        <!-- Allocation -->
+        <div class="glass-card rounded-2xl p-6">
+          <h3 class="font-display font-semibold mb-1">Allocation</h3>
+          <p class="text-vault-400 text-sm mb-5">By category</p>
+          <canvas id="allocationChart" width="200" height="200" class="mx-auto mb-5"></canvas>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm" style="background:#E8A924"></div>Stocks</div>
+              <span class="text-vault-300 font-medium">52.3%</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm" style="background:#F97316"></div>Crypto</div>
+              <span class="text-vault-300 font-medium">28.1%</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm" style="background:#22C55E"></div>Bonds</div>
+              <span class="text-vault-300 font-medium">12.8%</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm" style="background:#6366F1"></div>Cash</div>
+              <span class="text-vault-300 font-medium">6.8%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Holdings Table -->
+      <div class="glass-card rounded-2xl overflow-hidden">
+        <div class="px-6 py-5 flex items-center justify-between border-b border-vault-700">
+          <div>
+            <h3 class="font-display font-semibold">Top Holdings</h3>
+            <p class="text-vault-400 text-sm">Your best performing assets</p>
+          </div>
+          <button class="btn-ghost px-4 py-2 rounded-xl text-sm">View All <i class="fa-solid fa-arrow-right text-xs ml-1"></i></button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-vault-400 text-xs uppercase tracking-wider">
+                <th class="text-left px-6 py-4 font-medium">Asset</th>
+                <th class="text-left px-4 py-4 font-medium">Category</th>
+                <th class="text-right px-4 py-4 font-medium">Price</th>
+                <th class="text-right px-4 py-4 font-medium">Qty</th>
+                <th class="text-right px-4 py-4 font-medium">Value</th>
+                <th class="text-right px-4 py-4 font-medium">P&L</th>
+                <th class="text-right px-4 py-4 font-medium">7D</th>
+                <th class="text-center px-6 py-4 font-medium">Trend</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in holdings %}
+              <tr class="table-row border-t border-vault-700/50 hover:bg-vault-800/30 transition-colors">
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber/10 flex items-center justify-center font-display font-bold text-amber text-sm">{{ h.symbol[:2] }}</div>
+                    <div>
+                      <div class="font-medium">{{ h.symbol }}</div>
+                      <div class="text-vault-500 text-xs">{{ h.name }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-4"><span class="text-vault-400">{{ h.category }}</span></td>
+                <td class="px-4 py-4 text-right font-mono text-sm">${{ "{:,.2f}".format(h.price) }}</td>
+                <td class="px-4 py-4 text-right text-vault-300">{{ h.qty }}</td>
+                <td class="px-4 py-4 text-right font-medium">${{ "{:,.2f}".format(h.value) }}</td>
+                <td class="px-4 py-4 text-right">
+                  <span class="{% if h.is_positive %}text-gain{% else %}text-loss{% endif %} font-medium">
+                    {% if h.is_positive %}+{% endif %}${{ "{:,.2f}".format(h.gain|abs) }}
+                  </span>
+                  <div class="text-xs {% if h.is_positive %}text-gain{% else %}text-loss{% endif %}">
+                    <i class="fa-solid {% if h.is_positive %}fa-arrow-up{% else %}fa-arrow-down{% endif %} text-[9px]"></i> {{ "{:.1f}".format(h.gain_pct|abs) }}%
+                  </div>
+                </td>
+                <td class="px-4 py-4 text-right">
+                  <span class="badge {% if h.change7d >= 0 %}badge-gain{% else %}badge-loss{% endif %}">
+                    <i class="fa-solid {% if h.change7d >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %} text-[9px] mr-1"></i>{{ "{:.1f}".format(h.change7d|abs) }}%
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <canvas class="sparkline-canvas mx-auto" width="80" height="32" data-values="{{ h.sparkline|join(',') }}" data-positive="{% if h.is_positive %}true{% else %}false{% endif %}"></canvas>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="glass-card rounded-2xl mt-5 p-6">
+        <h3 class="font-display font-semibold mb-4">Recent Activity</h3>
+        <div class="space-y-3">
+          {% for tx in recent_transactions %}
+          <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-vault-800/30 transition-colors">
+            {% if tx.type == 'buy' %}
+            <div class="w-10 h-10 rounded-xl bg-gain/10 flex items-center justify-center">
+              <i class="fa-solid fa-arrow-down text-gain text-sm"></i>
+            </div>
+            {% elif tx.type == 'sell' %}
+            <div class="w-10 h-10 rounded-xl bg-loss/10 flex items-center justify-center">
+              <i class="fa-solid fa-arrow-up text-loss text-sm"></i>
+            </div>
+            {% endif %}
+            
+            <div class="flex-1">
+              <div class="text-sm font-medium">{% if tx.type == 'buy' %}Bought{% else %}Sold{% endif %} {{ tx.qty }} {{ tx.symbol }}</div>
+              <div class="text-vault-500 text-xs">{{ tx.date }} at {{ tx.time }}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-medium {% if tx.type == 'sell' %}text-gain{% endif %}">
+                {% if tx.type == 'sell' %}+{% else %}-{% endif %}${{ "{:,.2f}".format(tx.qty * tx.price) }}
+              </div>
+              <div class="text-vault-500 text-xs">@ ${{ "{:,.2f}".format(tx.price) }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Draw sparklines on load
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.sparkline-canvas').forEach(canvas => {
+      drawSparkline(canvas);
+    });
+    drawPerformanceChart();
+    drawAllocationChart();
+  });
+
+  function drawSparkline(canvas) {
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const values = canvas.dataset.values.split(',').map(Number);
+    const isPositive = canvas.dataset.positive === 'true';
+    canvas.width = 80 * dpr;
+    canvas.height = 32 * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = 80, h = 32;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = Math.max(max - min, 0.01);
+
+    ctx.beginPath();
+    values.forEach((v, i) => {
+      const x = (i / (values.length - 1)) * w;
+      const y = h - ((v - min) / range) * (h - 6) - 3;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = isPositive ? '#22C55E' : '#EF4444';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  function drawPerformanceChart() {
+    const canvas = document.getElementById('performanceChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = 260 * dpr;
+    canvas.style.height = '260px';
+    ctx.scale(dpr, dpr);
+
+    const w = rect.width;
+    const h = 260;
+    const padding = { top: 20, right: 20, bottom: 35, left: 60 };
+
+    // Generate smooth mock data
+    const points = 30;
+    const data = [];
+    let val = 108000;
+    for (let i = 0; i < points; i++) {
+      val += (Math.random() - 0.42) * 2500;
+      val = Math.max(val, 100000);
+      data.push(val);
+    }
+    data[data.length - 1] = 124859.43;
+
+    const minVal = Math.min(...data) * 0.995;
+    const maxVal = Math.max(...data) * 1.005;
+
+    const chartW = w - padding.left - padding.right;
+    const chartH = h - padding.top - padding.bottom;
+
+    function xPos(i) { return padding.left + (i / (points - 1)) * chartW; }
+    function yPos(v) { return padding.top + chartH - ((v - minVal) / (maxVal - minVal)) * chartH; }
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(42,42,53,0.5)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = padding.top + (chartH / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(w - padding.right, y);
+      ctx.stroke();
+
+      const val = maxVal - ((maxVal - minVal) / 4) * i;
+      ctx.fillStyle = '#7a7a94';
+      ctx.font = '11px DM Sans';
+      ctx.textAlign = 'right';
+      ctx.fillText('$' + (val / 1000).toFixed(1) + 'k', padding.left - 10, y + 4);
+    }
+
+    // Gradient fill
+    const gradient = ctx.createLinearGradient(0, padding.top, 0, h - padding.bottom);
+    gradient.addColorStop(0, 'rgba(232,169,36,0.15)');
+    gradient.addColorStop(1, 'rgba(232,169,36,0.0)');
+
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yPos(data[0]));
+    for (let i = 1; i < points; i++) {
+      const prevX = xPos(i - 1), prevY = yPos(data[i - 1]);
+      const currX = xPos(i), currY = yPos(data[i]);
+      const cpx = (prevX + currX) / 2;
+      ctx.bezierCurveTo(cpx, prevY, cpx, currY, currX, currY);
+    }
+    ctx.lineTo(xPos(points - 1), h - padding.bottom);
+    ctx.lineTo(xPos(0), h - padding.bottom);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yPos(data[0]));
+    for (let i = 1; i < points; i++) {
+      const prevX = xPos(i - 1), prevY = yPos(data[i - 1]);
+      const currX = xPos(i), currY = yPos(data[i]);
+      const cpx = (prevX + currX) / 2;
+      ctx.bezierCurveTo(cpx, prevY, cpx, currY, currX, currY);
+    }
+    ctx.strokeStyle = '#E8A924';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
+
+  function drawAllocationChart() {
+    const canvas = document.getElementById('allocationChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = 200 * dpr;
+    canvas.height = 200 * dpr;
+    ctx.scale(dpr, dpr);
+
+    const data = [52.3, 28.1, 12.8, 6.8];
+    const colors = ['#E8A924', '#F97316', '#22C55E', '#6366F1'];
+    const cx = 100, cy = 100, radius = 80, innerRadius = 55;
+    const total = data.reduce((a, b) => a + b, 0);
+
+    let startAngle = -Math.PI / 2;
+    data.forEach((val, i) => {
+      const sliceAngle = (val / total) * Math.PI * 2;
+      const endAngle = startAngle + sliceAngle;
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, startAngle, endAngle);
+      ctx.arc(cx, cy, innerRadius, endAngle, startAngle, true);
+      ctx.closePath();
+      ctx.fillStyle = colors[i];
+      ctx.fill();
+
+      // Gap
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, endAngle - 0.02, endAngle + 0.02);
+      ctx.arc(cx, cy, innerRadius, endAngle + 0.02, endAngle - 0.02, true);
+      ctx.closePath();
+      ctx.fillStyle = '#16161b';
+      ctx.fill();
+
+      startAngle = endAngle;
+    });
+
+    // Center text
+    ctx.fillStyle = '#e8e8f0';
+    ctx.font = 'bold 18px Space Grotesk';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$124.9k', cx, cy - 6);
+    ctx.fillStyle = '#7a7a94';
+    ctx.font = '11px DM Sans';
+    ctx.fillText('Total', cx, cy + 14);
+  }
+  
+  function setChartRange(btn, range) {
+    document.querySelectorAll('#chart-range-btns button').forEach(b => {
+      b.className = 'px-3 py-1.5 rounded-lg text-xs font-medium text-vault-400 hover:text-vault-200 transition-colors';
+    });
+    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-medium bg-amber/15 text-amber';
+    drawPerformanceChart(); // Redraw with different seed
+  }
+</script>
+{% endblock %}

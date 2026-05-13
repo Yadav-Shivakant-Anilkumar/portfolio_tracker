@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="auth-bg"><div class="auth-blob-center"></div></div>
+<div class="grid-pattern"></div>
+<div class="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-10">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-amber to-amber-dark mb-5">
+        <i class="fa-solid fa-vault text-vault-950 text-xl"></i>
+      </div>
+      <h1 class="font-display text-3xl font-bold tracking-tight text-vault-100">Create Account</h1>
+      <p class="text-vault-400 mt-2 text-sm">Start tracking your portfolio in minutes</p>
+    </div>
+
+    <div class="glass-card rounded-2xl p-8">
+      <form method="POST" action="{{ url_for('register') }}">
+        <div class="grid grid-cols-2 gap-4 mb-5">
+          <div class="form-group">
+            <label for="reg-first">First Name</label>
+            <input type="text" name="first_name" id="reg-first" class="vault-input w-full px-4 py-3 rounded-xl text-sm" placeholder="John" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-last">Last Name</label>
+            <input type="text" name="last_name" id="reg-last" class="vault-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Doe" required>
+          </div>
+        </div>
+        <div class="form-group mb-5">
+          <label for="reg-email">Email Address</label>
+          <input type="email" name="email" id="reg-email" class="vault-input w-full px-4 py-3 rounded-xl text-sm" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <div class="form-group mb-5">
+          <label for="reg-password">Password</label>
+          <div class="relative">
+            <input type="password" name="password" id="reg-password" class="vault-input w-full px-4 py-3 rounded-xl text-sm pr-12" placeholder="Min 8 characters" required minlength="8" oninput="checkPasswordStrength(this.value)">
+            <button type="button" onclick="togglePassword('reg-password', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-vault-400 hover:text-vault-200 transition-colors" aria-label="Toggle password visibility">
+              <i class="fa-regular fa-eye text-sm"></i>
+            </button>
+          </div>
+          <!-- Password strength bar -->
+          <div class="flex gap-1.5 mt-3">
+            <div id="str-1" class="h-1 flex-1 rounded-full bg-vault-700 transition-colors"></div>
+            <div id="str-2" class="h-1 flex-1 rounded-full bg-vault-700 transition-colors"></div>
+            <div id="str-3" class="h-1 flex-1 rounded-full bg-vault-700 transition-colors"></div>
+            <div id="str-4" class="h-1 flex-1 rounded-full bg-vault-700 transition-colors"></div>
+          </div>
+          <p id="str-text" class="text-xs mt-1.5 text-vault-500"></p>
+        </div>
+        <div class="form-group mb-6">
+          <label for="reg-confirm">Confirm Password</label>
+          <input type="password" name="confirm_password" id="reg-confirm" class="vault-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Re-enter password" required>
+        </div>
+        <label class="flex items-start gap-2.5 mb-8 cursor-pointer text-sm text-vault-400">
+          <input type="checkbox" class="w-4 h-4 mt-0.5 rounded border-vault-600 bg-vault-800 accent-amber" required>
+          <span>I agree to the <a href="#" class="text-amber hover:text-amber-light" onclick="event.preventDefault()">Terms of Service</a> and <a href="#" class="text-amber hover:text-amber-light" onclick="event.preventDefault()">Privacy Policy</a></span>
+        </label>
+        <button type="submit" class="btn-primary w-full py-3.5 rounded-xl text-sm font-display">
+          <span>Create Account</span>
+        </button>
+      </form>
+    </div>
+
+    <p class="text-center text-sm text-vault-400 mt-6">
+      Already have an account?
+      <a href="{{ url_for('login') }}" class="text-amber hover:text-amber-light transition-colors font-medium">Sign in</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function checkPasswordStrength(password) {
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+
+    const colors = ['bg-loss', 'bg-orange-500', 'bg-amber', 'bg-gain'];
+    const labels = ['Weak', 'Fair', 'Good', 'Strong'];
+
+    for (let i = 1; i <= 4; i++) {
+      const bar = document.getElementById('str-' + i);
+      bar.className = 'h-1 flex-1 rounded-full transition-colors ' + (i <= score ? colors[score - 1] : 'bg-vault-700');
+    }
+    const text = document.getElementById('str-text');
+    text.textContent = score > 0 ? labels[score - 1] : '';
+    text.className = 'text-xs mt-1.5 ' + (score > 0 ? (score <= 1 ? 'text-loss' : score <= 2 ? 'text-orange-400' : score === 3 ? 'text-amber' : 'text-gain') : 'text-vault-500');
+  }
+</script>
+{% endblock %}

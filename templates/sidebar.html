@@ -1,0 +1,48 @@
+<aside class="w-64 bg-vault-900 border-r border-vault-700 flex flex-col fixed h-full z-30">
+  <div class="p-6 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber to-amber-dark flex items-center justify-center">
+      <i class="fa-solid fa-vault text-vault-950 text-sm"></i>
+    </div>
+    <span class="font-display text-lg font-bold tracking-tight">Vaultfolio</span>
+  </div>
+
+  <nav class="flex-1 px-4 py-2 space-y-1" aria-label="Main navigation">
+    <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+      <i class="fa-solid fa-grid-2 w-5 text-center"></i> Dashboard
+    </a>
+    <a href="{{ url_for('add_entry') }}" class="nav-item {% if request.endpoint == 'add_entry' %}active{% endif %}">
+      <i class="fa-solid fa-plus w-5 text-center"></i> Add Entry
+    </a>
+    <a href="#" class="nav-item">
+      <i class="fa-solid fa-briefcase w-5 text-center"></i> Holdings
+    </a>
+    <a href="#" class="nav-item">
+      <i class="fa-solid fa-arrow-right-arrow-left w-5 text-center"></i> Transactions
+    </a>
+    <a href="#" class="nav-item">
+      <i class="fa-solid fa-chart-pie w-5 text-center"></i> Analytics
+    </a>
+
+    <div class="pt-4 mt-4 border-t border-vault-700">
+      <p class="px-4 text-[10px] uppercase tracking-widest text-vault-500 mb-2">Portfolios</p>
+      <a href="#" class="nav-item active">
+        <div class="pulse-dot"></div> {{ session.get('portfolio_name', 'My Portfolio') }}
+      </a>
+      <a href="{{ url_for('setup', step=1) }}" class="nav-item">
+        <i class="fa-solid fa-plus text-vault-500 w-2 text-center text-xs"></i> <span class="text-vault-500">New Portfolio</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- User section -->
+  <div class="p-4 border-t border-vault-700">
+    <a href="{{ url_for('logout') }}" class="nav-item">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber/20 to-amber-dark/20 flex items-center justify-center text-amber text-sm font-bold">J</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium truncate">John Doe</div>
+        <div class="text-xs text-vault-500 truncate">Logout</div>
+      </div>
+      <i class="fa-solid fa-right-from-bracket text-vault-500 text-xs"></i>
+    </a>
+  </div>
+</aside>

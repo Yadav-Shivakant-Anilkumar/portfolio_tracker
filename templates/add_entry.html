@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex min-h-screen bg-vault-950">
+  {% include 'sidebar.html' %}
+
+  <main class="flex-1 ml-64">
+    <header class="sticky top-0 z-20 bg-vault-950/80 backdrop-blur-xl border-b border-vault-700 px-8 py-4">
+      <div class="flex items-center gap-3 text-vault-400 text-sm">
+        <a href="{{ url_for('dashboard') }}" class="hover:text-vault-200 transition-colors"><i class="fa-solid fa-arrow-left"></i></a>
+        <span>/</span>
+        <span>Add Entry</span>
+      </div>
+      <h2 class="font-display text-xl font-bold mt-1">New Transaction</h2>
+    </header>
+
+    <div class="p-8 max-w-3xl">
+      <form method="POST" action="{{ url_for('add_entry') }}">
+        <!-- Transaction Type -->
+        <div class="form-group mb-6">
+          <label>Transaction Type</label>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" onclick="selectTxType('buy', this)" class="tx-type-btn btn-ghost py-4 rounded-xl text-sm text-center flex items-center justify-center gap-2 border-gain text-gain bg-gain/10">
+              <i class="fa-solid fa-arrow-down"></i> Buy
+            </button>
+            <button type="button" onclick="selectTxType('sell', this)" class="tx-type-btn btn-ghost py-4 rounded-xl text-sm text-center flex items-center justify-center gap-2">
+              <i class="fa-solid fa-arrow-up"></i> Sell
+            </button>
+          </div>
+          <input type="hidden" name="tx_type" id="selected-tx-type" value="buy">
+        </div>
+
+        <!-- Asset Search -->
+        <div class="form-group mb-6">
+          <label for="asset-search">Search Asset</label>
+          <div class="relative">
+            <input type="text" id="asset-search" class="vault-input w-full px-4 py-3 rounded-xl text-sm pr-12" placeholder="Type symbol or name..." oninput="filterAssets(this.value)" autocomplete="off" required>
+            <i class="fa-solid fa-magnifying-glass absolute right-4 top-1/2 -translate-y-1/2 text-vault-500 text-xs"></i>
+            <!-- Dropdown -->
+            <div id="asset-dropdown" class="absolute top-full left-0 right-0 mt-2 bg-vault-800 border border-vault-700 rounded-xl overflow-hidden z-10 shadow-2xl" style="display:none;">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+          <input type="hidden" name="asset_symbol" id="selected-asset" value="">
+        </div>
+
+        <div class="grid grid-cols-2 gap-5 mb-6">
+          <div class="form-group">
+            <label for="entry-quantity">Quantity</label>
+            <input type="number" name="quantity" id="entry-quantity" class="vault-input w-full px-4 py-3 rounded-xl text-sm" placeholder="0.00" step="any" min="0.0001" required oninput="calculateTotal()">
+          </div>
+          <div class="form-group">
+            <label for="entry-price">Price per Unit</label>
+            <input type="number" name="price" id="entry-price" class="vault-input w-full px-4 py-3 rounded-xl text-sm" placeholder="0.00" step="any" min="0.01" required oninput="calculateTotal()">
+          </div>
+        </div>
+
+        <!-- Total -->
+        <div class="glass-card rounded-xl p-4 mb-6 flex items-center justify-between">
+          <span class="text-vault-400 text-sm">Estimated Total</span>
+          <span class="font-display text-xl font-bold" id="entry-total">$0.00</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-5 mb-6">
+          <div class="form-group">
+            <label for="entry-date">Date</label>
+            <input type="date" name="entry_date" id="entry-date" class="vault-input w-full px-4 py-3 rounded-xl text-sm" required>
+          </div>
+          <div class="form-group">
+            <label for="entry-category">Category</label>
+            <select name="category" id="entry-category" class="vault-select w-full px-4 py-3 rounded-xl text-sm">
+              <option value="stocks">Stocks</option>
+              <option value="crypto">Crypto</option>
+              <option value="bonds">Bonds</option>
+              <option value="commodities">Commodities</option>
+              <option value="realestate">Real Estate</option>
+              <option value="cash">Cash</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group mb-8">
+          <label for="entry-notes">Notes (optional)</label>
+          <textarea name="notes" id="entry-notes" class="vault-input w-full px-4 py-3 rounded-xl text-sm resize-none" rows="3" placeholder="Add any notes about this transaction..."></textarea>
+        </div>
+
+        <div class="flex gap-3">
+          <a href="{{ url_for('dashboard') }}" class="btn-ghost flex-1 py-3.5 rounded-xl text-sm font-display text-center inline-block leading-loose">Cancel</a>
+          <button type="submit" class="btn-primary flex-1 py-3.5 rounded-xl text-sm font-display"><span>Add Transaction</span></button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const dateInput = document.getElementById('entry-date');
+    if (dateInput && !dateInput.value) {
+      dateInput.value = new Date().toISOString().split('T')[0];
+    }
+  });
+
+  const assetSearchData = [
+    { symbol: 'AAPL', name: 'Apple Inc.', category: 'Stocks', price: 189.84, change: 1.2 },
+    { symbol: 'MSFT', name: 'Microsoft Corp.', category: 'Stocks', price: 415.26, change: 0.8 },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.', category: 'Stocks', price: 155.72, change: -0.5 },
+    { symbol: 'TSLA', name: 'Tesla Inc.', category: 'Stocks', price: 248.42, change: -1.8 },
+    { symbol: 'BTC', name: 'Bitcoin', category: 'Crypto', price: 67432.10, change: 3.2 },
+    { symbol: 'ETH', name: 'Ethereum', category: 'Crypto', price: 3521.80, change: 2.1 },
+    { symbol: 'SOL', name: 'Solana', category: 'Crypto', price: 172.30, change: 5.8 }
+  ];
+
+  function selectTxType(type, btn) {
+    document.getElementById('selected-tx-type').value = type;
+    document.querySelectorAll('.tx-type-btn').forEach(b => {
+      b.className = 'tx-type-btn btn-ghost py-4 rounded-xl text-sm text-center flex items-center justify-center gap-2';
+    });
+    if (type === 'buy') {
+      btn.classList.add('border-gain', 'text-gain', 'bg-gain/10');
+    } else {
+      btn.classList.add('border-loss', 'text-loss', 'bg-loss/10');
+    }
+  }
+
+  function filterAssets(query) {
+    const dropdown = document.getElementById('asset-dropdown');
+    if (!query.trim()) { dropdown.style.display = 'none'; return; }
+
+    const filtered = assetSearchData.filter(a =>
+      a.symbol.toLowerCase().includes(query.toLowerCase()) ||
+      a.name.toLowerCase().includes(query.toLowerCase())
+    );
+
+    if (filtered.length === 0) {
+      dropdown.style.display = 'none';
+      return;
+    }
+
+    dropdown.style.display = 'block';
+    dropdown.innerHTML = filtered.map(a => {
+      const changeColor = a.change >= 0 ? 'text-gain' : 'text-loss';
+      const arrow = a.change >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+      return `
+        <button type="button" onclick="selectAsset('${a.symbol}')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-vault-700/50 transition-colors text-left">
+          <div class="w-9 h-9 rounded-lg bg-amber/10 flex items-center justify-center font-display font-bold text-amber text-xs">${a.symbol.slice(0,2)}</div>
+          <div class="flex-1">
+            <div class="font-medium text-sm">${a.symbol}</div>
+            <div class="text-vault-500 text-xs">${a.name}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm font-mono">$${a.price.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+            <div class="text-xs ${changeColor}"><i class="fa-solid ${arrow} text-[9px]"></i> ${Math.abs(a.change).toFixed(1)}%</div>
+          </div>
+        </button>
+      `;
+    }).join('');
+  }
+
+  function selectAsset(symbol) {
+    const asset = assetSearchData.find(a => a.symbol === symbol);
+    if (!asset) return;
+
+    document.getElementById('selected-asset').value = symbol;
+    document.getElementById('asset-search').value = symbol + ' — ' + asset.name;
+    document.getElementById('entry-price').value = asset.price;
+    document.getElementById('asset-dropdown').style.display = 'none';
+    
+    // Select category
+    const catSelect = document.getElementById('entry-category');
+    for (let i = 0; i < catSelect.options.length; i++) {
+        if (catSelect.options[i].text === asset.category) {
+            catSelect.selectedIndex = i;
+            break;
+        }
+    }
+    
+    calculateTotal();
+  }
+
+  function calculateTotal() {
+    const qty = parseFloat(document.getElementById('entry-quantity').value) || 0;
+    const price = parseFloat(document.getElementById('entry-price').value) || 0;
+    const total = qty * price;
+    document.getElementById('entry-total').textContent = '$' + total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+</script>
+{% endblock %}
