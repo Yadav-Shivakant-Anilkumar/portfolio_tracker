@@ -62,7 +62,7 @@
               <i class="fa-solid fa-wallet text-amber text-sm"></i>
             </div>
           </div>
-          <p class="font-display text-2xl font-bold">${{ "{:,.2f}".format(portfolio.total_value) }}</p>
+          <p class="font-display text-2xl font-bold">₹{{ "{:,.2f}".format(portfolio.total_value) }}</p>
           <div class="flex items-center gap-2 mt-2">
             <span class="badge badge-gain text-xs"><i class="fa-solid fa-arrow-up text-[10px] mr-1"></i>12.4%</span>
             <span class="text-vault-500 text-xs">vs last month</span>
@@ -76,7 +76,7 @@
               <i class="fa-solid fa-trending-up text-gain text-sm"></i>
             </div>
           </div>
-          <p class="font-display text-2xl font-bold text-gain">+${{ "{:,.2f}".format(portfolio.total_gain) }}</p>
+          <p class="font-display text-2xl font-bold text-gain">+₹{{ "{:,.2f}".format(portfolio.total_gain) }}</p>
           <div class="flex items-center gap-2 mt-2">
             <span class="badge badge-gain text-xs"><i class="fa-solid fa-arrow-up text-[10px] mr-1"></i>12.4%</span>
             <span class="text-vault-500 text-xs">all time</span>
@@ -90,7 +90,7 @@
               <i class="fa-solid fa-bolt text-gain text-sm"></i>
             </div>
           </div>
-          <p class="font-display text-2xl font-bold text-gain">+${{ "{:,.2f}".format(portfolio.todays_pl) }}</p>
+          <p class="font-display text-2xl font-bold text-gain">+₹{{ "{:,.2f}".format(portfolio.todays_pl) }}</p>
           <div class="flex items-center gap-2 mt-2">
             <span class="badge badge-gain text-xs"><i class="fa-solid fa-arrow-up text-[10px] mr-1"></i>0.31%</span>
             <span class="text-vault-500 text-xs">intraday</span>
@@ -193,12 +193,12 @@
                   </div>
                 </td>
                 <td class="px-4 py-4"><span class="text-vault-400">{{ h.category }}</span></td>
-                <td class="px-4 py-4 text-right font-mono text-sm">${{ "{:,.2f}".format(h.price) }}</td>
+                <td class="px-4 py-4 text-right font-mono text-sm">₹{{ "{:,.2f}".format(h.price) }}</td>
                 <td class="px-4 py-4 text-right text-vault-300">{{ h.qty }}</td>
-                <td class="px-4 py-4 text-right font-medium">${{ "{:,.2f}".format(h.value) }}</td>
+                <td class="px-4 py-4 text-right font-medium">₹{{ "{:,.2f}".format(h.value) }}</td>
                 <td class="px-4 py-4 text-right">
                   <span class="{% if h.is_positive %}text-gain{% else %}text-loss{% endif %} font-medium">
-                    {% if h.is_positive %}+{% endif %}${{ "{:,.2f}".format(h.gain|abs) }}
+                    {% if h.is_positive %}+{% endif %}₹{{ "{:,.2f}".format(h.gain|abs) }}
                   </span>
                   <div class="text-xs {% if h.is_positive %}text-gain{% else %}text-loss{% endif %}">
                     <i class="fa-solid {% if h.is_positive %}fa-arrow-up{% else %}fa-arrow-down{% endif %} text-[9px]"></i> {{ "{:.1f}".format(h.gain_pct|abs) }}%
@@ -241,9 +241,9 @@
             </div>
             <div class="text-right">
               <div class="text-sm font-medium {% if tx.type == 'sell' %}text-gain{% endif %}">
-                {% if tx.type == 'sell' %}+{% else %}-{% endif %}${{ "{:,.2f}".format(tx.qty * tx.price) }}
+                {% if tx.type == 'sell' %}+{% else %}-{% endif %}₹{{ "{:,.2f}".format(tx.qty * tx.price) }}
               </div>
-              <div class="text-vault-500 text-xs">@ ${{ "{:,.2f}".format(tx.price) }}</div>
+              <div class="text-vault-500 text-xs">@ ₹{{ "{:,.2f}".format(tx.price) }}</div>
             </div>
           </div>
           {% endfor %}
@@ -341,7 +341,7 @@
       ctx.fillStyle = '#7a7a94';
       ctx.font = '11px DM Sans';
       ctx.textAlign = 'right';
-      ctx.fillText('$' + (val / 1000).toFixed(1) + 'k', padding.left - 10, y + 4);
+      ctx.fillText('₹' + (val / 1000).toFixed(1) + 'k', padding.left - 10, y + 4);
     }
 
     // Gradient fill
@@ -419,7 +419,7 @@
     ctx.font = 'bold 18px Space Grotesk';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('$124.9k', cx, cy - 6);
+    ctx.fillText('₹124.9k', cx, cy - 6);
     ctx.fillStyle = '#7a7a94';
     ctx.font = '11px DM Sans';
     ctx.fillText('Total', cx, cy + 14);

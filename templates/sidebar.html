@@ -37,9 +37,9 @@
   <!-- User section -->
   <div class="p-4 border-t border-vault-700">
     <a href="{{ url_for('logout') }}" class="nav-item">
-      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber/20 to-amber-dark/20 flex items-center justify-center text-amber text-sm font-bold">J</div>
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber/20 to-amber-dark/20 flex items-center justify-center text-amber text-sm font-bold">{{ session.get('user_name', 'U')[0] | upper }}</div>
       <div class="flex-1 min-w-0">
-        <div class="text-sm font-medium truncate">John Doe</div>
+        <div class="text-sm font-medium truncate">{{ session.get('user_name', 'User') }}</div>
         <div class="text-xs text-vault-500 truncate">Logout</div>
       </div>
       <i class="fa-solid fa-right-from-bracket text-vault-500 text-xs"></i>
