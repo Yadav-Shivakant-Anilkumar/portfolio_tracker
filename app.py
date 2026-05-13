@@ -1,7 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
+from functools import wraps
 from flask_mysqldb import MySQL
 import config
 from datetime import datetime
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page.', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 app = Flask(__name__)
 app.secret_key = "vaultfolio_super_secret_key" # Replace in production
@@ -29,6 +39,7 @@ def login():
         password = request.form.get('password')
         if email and len(password) >= 6:
             session['user_id'] = 1 # mock user id
+            session['user_name'] = email.split('@')[0].capitalize() if email else 'User'
             flash("Login successful! Redirecting...", "success")
             return redirect(url_for('dashboard'))
         else:
@@ -39,11 +50,15 @@ def login():
 def register():
     if request.method == 'POST':
         # Simple mock register
+        first_name = request.form.get('first_name', 'User')
+        last_name = request.form.get('last_name', '')
         password = request.form.get('password')
         confirm = request.form.get('confirm_password')
         if password != confirm:
             flash("Passwords do not match", "error")
         else:
+            session['user_id'] = 1 # mock user id
+            session['user_name'] = f"{first_name} {last_name}".strip()
             flash("Account created successfully!", "success")
             return redirect(url_for('setup', step=1))
     return render_template('register.html')
@@ -57,6 +72,7 @@ def logout():
 # Setup Routes
 # -------------------------------------------------------------
 @app.route('/setup/<int:step>', methods=['GET', 'POST'])
+@login_required
 def setup(step):
     if step not in [1, 2, 3]:
         return redirect(url_for('setup', step=1))
@@ -77,6 +93,7 @@ def setup(step):
 # -------------------------------------------------------------
 @app.route('/')
 @app.route('/dashboard')
+@login_required
 def dashboard():
     # If using real DB, uncomment and implement the logic from Tracker.txt
     '''
@@ -126,6 +143,7 @@ def dashboard():
 # Add Entry Route
 # -------------------------------------------------------------
 @app.route('/add_entry', methods=['GET', 'POST'])
+@login_required
 def add_entry():
     if request.method == 'POST':
         # Logic to save to database from Tracker.txt

@@ -58,7 +58,7 @@
         <!-- Total -->
         <div class="glass-card rounded-xl p-4 mb-6 flex items-center justify-between">
           <span class="text-vault-400 text-sm">Estimated Total</span>
-          <span class="font-display text-xl font-bold" id="entry-total">$0.00</span>
+          <span class="font-display text-xl font-bold" id="entry-total">₹0.00</span>
         </div>
 
         <div class="grid grid-cols-2 gap-5 mb-6">
@@ -151,7 +151,7 @@
             <div class="text-vault-500 text-xs">${a.name}</div>
           </div>
           <div class="text-right">
-            <div class="text-sm font-mono">$${a.price.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+            <div class="text-sm font-mono">₹${a.price.toLocaleString('en-IN', {minimumFractionDigits:2})}</div>
             <div class="text-xs ${changeColor}"><i class="fa-solid ${arrow} text-[9px]"></i> ${Math.abs(a.change).toFixed(1)}%</div>
           </div>
         </button>
@@ -184,7 +184,7 @@
     const qty = parseFloat(document.getElementById('entry-quantity').value) || 0;
     const price = parseFloat(document.getElementById('entry-price').value) || 0;
     const total = qty * price;
-    document.getElementById('entry-total').textContent = '$' + total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('entry-total').textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
   }
 </script>
 {% endblock %}

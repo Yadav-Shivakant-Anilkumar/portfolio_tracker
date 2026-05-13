@@ -70,12 +70,13 @@
           <div class="form-group mb-5">
             <label>Base Currency</label>
             <div class="grid grid-cols-4 gap-2" id="currency-options">
-              <button type="button" onclick="selectOption('currency', 'USD', this)" class="currency-opt btn-ghost py-3 rounded-xl text-sm text-center font-medium" style="border-color: var(--accent); color: var(--accent); background: var(--accent-glow);" data-value="USD">$ USD</button>
+              <button type="button" onclick="selectOption('currency', 'INR', this)" class="currency-opt btn-ghost py-3 rounded-xl text-sm text-center font-medium" style="border-color: var(--accent); color: var(--accent); background: var(--accent-glow);" data-value="INR">₹ INR</button>
+              <button type="button" onclick="selectOption('currency', 'USD', this)" class="currency-opt btn-ghost py-3 rounded-xl text-sm text-center font-medium" data-value="USD">$ USD</button>
               <button type="button" onclick="selectOption('currency', 'EUR', this)" class="currency-opt btn-ghost py-3 rounded-xl text-sm text-center font-medium" data-value="EUR">€ EUR</button>
               <button type="button" onclick="selectOption('currency', 'GBP', this)" class="currency-opt btn-ghost py-3 rounded-xl text-sm text-center font-medium" data-value="GBP">£ GBP</button>
               <button type="button" onclick="selectOption('currency', 'BTC', this)" class="currency-opt btn-ghost py-3 rounded-xl text-sm text-center font-medium" data-value="BTC">₿ BTC</button>
             </div>
-            <input type="hidden" name="currency" id="selected-currency" value="USD">
+            <input type="hidden" name="currency" id="selected-currency" value="INR">
           </div>
 
           <div class="form-group mb-8">
