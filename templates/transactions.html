@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex min-h-screen bg-vault-950">
+  {% include 'sidebar.html' %}
+
+  <main class="flex-1 ml-64 p-8">
+    <header class="mb-8 flex justify-between items-end">
+      <div>
+        <h1 class="font-display text-3xl font-bold tracking-tight mb-2">Transactions</h1>
+        <p class="text-vault-400">History of all your trades and dividends.</p>
+      </div>
+      <a href="{{ url_for('add_entry') }}" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-medium">
+        <span><i class="fa-solid fa-plus mr-2"></i> Add Entry</span>
+      </a>
+    </header>
+
+    <div class="glass-card rounded-2xl overflow-hidden">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="text-vault-400 border-b border-vault-700 bg-vault-900/50">
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Date</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Type</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Asset</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Category</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Quantity</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Price</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Total</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-vault-700">
+          {% for tx in transactions %}
+          <tr class="hover:bg-vault-800/50 transition-colors">
+            <td class="px-6 py-4 text-vault-300">{{ tx.date }}</td>
+            <td class="px-6 py-4">
+              <span class="badge {% if tx.type == 'buy' %}badge-gain{% elif tx.type == 'sell' %}badge-loss{% else %}badge-info{% endif %} capitalize">
+                {{ tx.type }}
+              </span>
+            </td>
+            <td class="px-6 py-4 font-medium text-amber">{{ tx.symbol }}</td>
+            <td class="px-6 py-4 text-vault-400 capitalize">{{ tx.category }}</td>
+            <td class="px-6 py-4 text-right">{{ "{:,.4f}".format(tx.qty) }}</td>
+            <td class="px-6 py-4 text-right">₹{{ "{:,.2f}".format(tx.price) }}</td>
+            <td class="px-6 py-4 text-right font-medium">₹{{ "{:,.2f}".format(tx.qty * tx.price) }}</td>
+            <td class="px-6 py-4 text-vault-500 text-xs truncate max-w-[150px]">{{ tx.notes }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="px-6 py-12 text-center text-vault-400">
+              No transactions found. <a href="{{ url_for('add_entry') }}" class="text-amber hover:underline">Add your first trade.</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+{% endblock %}

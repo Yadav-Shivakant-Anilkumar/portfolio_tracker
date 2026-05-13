@@ -62,10 +62,13 @@
               <i class="fa-solid fa-wallet text-amber text-sm"></i>
             </div>
           </div>
-          <p class="font-display text-2xl font-bold">₹{{ "{:,.2f}".format(portfolio.total_value) }}</p>
+          <p class="font-display text-2xl font-bold">{{ portfolio.currency_symbol }}{{ "{:,.2f}".format(portfolio.total_value) }}</p>
           <div class="flex items-center gap-2 mt-2">
-            <span class="badge badge-gain text-xs"><i class="fa-solid fa-arrow-up text-[10px] mr-1"></i>12.4%</span>
-            <span class="text-vault-500 text-xs">vs last month</span>
+            {% set gain_overall_pct = (portfolio.total_gain / portfolio.total_invested * 100) if portfolio.total_invested > 0 else 0 %}
+            <span class="badge {% if gain_overall_pct >= 0 %}badge-gain{% else %}badge-loss{% endif %} text-xs">
+              <i class="fa-solid fa-arrow-{% if gain_overall_pct >= 0 %}up{% else %}down{% endif %} text-[10px] mr-1"></i>{{ "{:.1f}".format(gain_overall_pct|abs) }}%
+            </span>
+            <span class="text-vault-500 text-xs">all time</span>
           </div>
         </div>
 
@@ -73,13 +76,17 @@
           <div class="flex items-center justify-between mb-4">
             <span class="text-vault-400 text-sm">Total Gain</span>
             <div class="w-9 h-9 rounded-xl bg-gain/10 flex items-center justify-center">
-              <i class="fa-solid fa-trending-up text-gain text-sm"></i>
+              <i class="fa-solid fa-arrow-trend-up text-gain text-sm"></i>
             </div>
           </div>
-          <p class="font-display text-2xl font-bold text-gain">+₹{{ "{:,.2f}".format(portfolio.total_gain) }}</p>
+          {% set gain_sign = '+' if portfolio.total_gain >= 0 else '' %}
+          <p class="font-display text-2xl font-bold {% if portfolio.total_gain >= 0 %}text-gain{% else %}text-loss{% endif %}">{{ gain_sign }}{{ portfolio.currency_symbol }}{{ "{:,.2f}".format(portfolio.total_gain|abs) }}</p>
           <div class="flex items-center gap-2 mt-2">
-            <span class="badge badge-gain text-xs"><i class="fa-solid fa-arrow-up text-[10px] mr-1"></i>12.4%</span>
-            <span class="text-vault-500 text-xs">all time</span>
+            {% set gain_pct = (portfolio.total_gain / portfolio.total_invested * 100) if portfolio.total_invested > 0 else 0 %}
+            <span class="badge {% if gain_pct >= 0 %}badge-gain{% else %}badge-loss{% endif %} text-xs">
+              <i class="fa-solid fa-arrow-{% if gain_pct >= 0 %}up{% else %}down{% endif %} text-[10px] mr-1"></i>{{ "{:.1f}".format(gain_pct|abs) }}%
+            </span>
+            <span class="text-vault-500 text-xs">all time return</span>
           </div>
         </div>
 
@@ -90,9 +97,13 @@
               <i class="fa-solid fa-bolt text-gain text-sm"></i>
             </div>
           </div>
-          <p class="font-display text-2xl font-bold text-gain">+₹{{ "{:,.2f}".format(portfolio.todays_pl) }}</p>
+          {% set pl_sign = '+' if portfolio.todays_pl >= 0 else '' %}
+          <p class="font-display text-2xl font-bold {% if portfolio.todays_pl >= 0 %}text-gain{% else %}text-loss{% endif %}">{{ pl_sign }}{{ portfolio.currency_symbol }}{{ "{:,.2f}".format(portfolio.todays_pl|abs) }}</p>
           <div class="flex items-center gap-2 mt-2">
-            <span class="badge badge-gain text-xs"><i class="fa-solid fa-arrow-up text-[10px] mr-1"></i>0.31%</span>
+            {% set pl_pct = (portfolio.todays_pl / portfolio.total_value * 100) if portfolio.total_value > 0 else 0 %}
+            <span class="badge {% if pl_pct >= 0 %}badge-gain{% else %}badge-loss{% endif %} text-xs">
+              <i class="fa-solid fa-arrow-{% if pl_pct >= 0 %}up{% else %}down{% endif %} text-[10px] mr-1"></i>{{ "{:.2f}".format(pl_pct|abs) }}%
+            </span>
             <span class="text-vault-500 text-xs">intraday</span>
           </div>
         </div>
@@ -136,24 +147,7 @@
           <h3 class="font-display font-semibold mb-1">Allocation</h3>
           <p class="text-vault-400 text-sm mb-5">By category</p>
           <canvas id="allocationChart" width="200" height="200" class="mx-auto mb-5"></canvas>
-          <div class="space-y-3">
-            <div class="flex items-center justify-between text-sm">
-              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm" style="background:#E8A924"></div>Stocks</div>
-              <span class="text-vault-300 font-medium">52.3%</span>
-            </div>
-            <div class="flex items-center justify-between text-sm">
-              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm" style="background:#F97316"></div>Crypto</div>
-              <span class="text-vault-300 font-medium">28.1%</span>
-            </div>
-            <div class="flex items-center justify-between text-sm">
-              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm" style="background:#22C55E"></div>Bonds</div>
-              <span class="text-vault-300 font-medium">12.8%</span>
-            </div>
-            <div class="flex items-center justify-between text-sm">
-              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm" style="background:#6366F1"></div>Cash</div>
-              <span class="text-vault-300 font-medium">6.8%</span>
-            </div>
-          </div>
+          <div class="space-y-3" id="allocation-legend"></div>
         </div>
       </div>
 
@@ -386,23 +380,37 @@
     canvas.height = 200 * dpr;
     ctx.scale(dpr, dpr);
 
-    const data = [52.3, 28.1, 12.8, 6.8];
-    const colors = ['#E8A924', '#F97316', '#22C55E', '#6366F1'];
+    const alloc = {{ allocation_json | safe }};
+    const labels = alloc.labels;
+    const values = alloc.values;
+    const colors = ['#E8A924', '#F97316', '#22C55E', '#6366F1', '#8B5CF6', '#06B6D4'];
     const cx = 100, cy = 100, radius = 80, innerRadius = 55;
-    const total = data.reduce((a, b) => a + b, 0);
 
+    if (!labels.length) {
+      ctx.fillStyle = '#2a2a35';
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2, true);
+      ctx.fill();
+      ctx.fillStyle = '#7a7a94';
+      ctx.font = '12px DM Sans';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('No data yet', cx, cy);
+      return;
+    }
+
+    const total = values.reduce((a, b) => a + b, 0);
     let startAngle = -Math.PI / 2;
-    data.forEach((val, i) => {
+    values.forEach((val, i) => {
       const sliceAngle = (val / total) * Math.PI * 2;
       const endAngle = startAngle + sliceAngle;
-
       ctx.beginPath();
       ctx.arc(cx, cy, radius, startAngle, endAngle);
       ctx.arc(cx, cy, innerRadius, endAngle, startAngle, true);
       ctx.closePath();
-      ctx.fillStyle = colors[i];
+      ctx.fillStyle = colors[i % colors.length];
       ctx.fill();
-
       // Gap
       ctx.beginPath();
       ctx.arc(cx, cy, radius, endAngle - 0.02, endAngle + 0.02);
@@ -410,19 +418,36 @@
       ctx.closePath();
       ctx.fillStyle = '#16161b';
       ctx.fill();
-
       startAngle = endAngle;
     });
 
-    // Center text
+    // Center text — real total value
+    const totalValue = {{ portfolio.total_value | default(0) }};
+    const currSymbol = {{ portfolio.currency_symbol | tojson }};
+    const displayVal = totalValue >= 1000000
+      ? currSymbol + (totalValue/1000000).toFixed(1) + 'M'
+      : totalValue >= 1000
+      ? currSymbol + (totalValue/1000).toFixed(1) + 'k'
+      : currSymbol + totalValue.toFixed(0);
     ctx.fillStyle = '#e8e8f0';
-    ctx.font = 'bold 18px Space Grotesk';
+    ctx.font = 'bold 16px Space Grotesk';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('₹124.9k', cx, cy - 6);
+    ctx.fillText(displayVal, cx, cy - 6);
     ctx.fillStyle = '#7a7a94';
     ctx.font = '11px DM Sans';
     ctx.fillText('Total', cx, cy + 14);
+
+    // Build legend
+    const legend = document.getElementById('allocation-legend');
+    if (legend) {
+      legend.innerHTML = labels.map((lbl, i) =>
+        `<div class="flex items-center justify-between text-sm">
+          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-sm" style="background:${colors[i % colors.length]}"></div>${lbl}</div>
+          <span class="text-vault-300 font-medium">${values[i]}%</span>
+        </div>`
+      ).join('');
+    }
   }
   
   function setChartRange(btn, range) {
