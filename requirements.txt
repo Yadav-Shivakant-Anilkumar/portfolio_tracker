@@ -1,3 +1,5 @@
 flask
 flask-mysqldb
 python-dotenv
+werkzeug
+yfinance

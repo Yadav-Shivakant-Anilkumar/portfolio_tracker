@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex min-h-screen bg-vault-950">
+  {% include 'sidebar.html' %}
+
+  <main class="flex-1 ml-64 p-8">
+    <header class="mb-8 flex justify-between items-end">
+      <div>
+        <h1 class="font-display text-3xl font-bold tracking-tight mb-2">My Holdings</h1>
+        <p class="text-vault-400">Your current positions with live market prices.</p>
+      </div>
+      <a href="{{ url_for('add_entry') }}" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-medium">
+        <span><i class="fa-solid fa-plus mr-2"></i>Add Entry</span>
+      </a>
+    </header>
+
+    {% if holdings %}
+    <!-- Summary Strip -->
+    <div class="grid grid-cols-3 gap-5 mb-6">
+      {% set total_val = holdings | sum(attribute='value') %}
+      {% set total_gain = holdings | sum(attribute='gain') %}
+      {% set total_invested = holdings | sum(attribute='invested') %}
+      <div class="glass-card rounded-2xl p-5 stat-card">
+        <p class="text-vault-400 text-xs uppercase tracking-wider mb-1">Total Value</p>
+        <p class="font-display text-xl font-bold">{{ currency_symbol }}{{ "{:,.2f}".format(total_val) }}</p>
+      </div>
+      <div class="glass-card rounded-2xl p-5 stat-card">
+        <p class="text-vault-400 text-xs uppercase tracking-wider mb-1">Total Invested</p>
+        <p class="font-display text-xl font-bold">{{ currency_symbol }}{{ "{:,.2f}".format(total_invested) }}</p>
+      </div>
+      <div class="glass-card rounded-2xl p-5 stat-card">
+        <p class="text-vault-400 text-xs uppercase tracking-wider mb-1">Total Gain / Loss</p>
+        {% set gain_pct = (total_gain / total_invested * 100) if total_invested > 0 else 0 %}
+        <p class="font-display text-xl font-bold {% if total_gain >= 0 %}text-gain{% else %}text-loss{% endif %}">
+          {% if total_gain >= 0 %}+{% endif %}{{ currency_symbol }}{{ "{:,.2f}".format(total_gain|abs) }}
+          <span class="text-sm font-normal ml-1">({{ "{:.1f}".format(gain_pct|abs) }}%)</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="glass-card rounded-2xl overflow-hidden">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="text-vault-400 border-b border-vault-700 bg-vault-900/50">
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Asset</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Category</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Qty</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Avg Cost</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Live Price</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Market Value</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Gain / Loss</th>
+            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Return %</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-vault-700">
+          {% for h in holdings %}
+          <tr class="hover:bg-vault-800/40 transition-colors">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber/10 flex items-center justify-center font-bold text-amber text-xs">
+                  {{ h.symbol[:2] }}
+                </div>
+                <div>
+                  <div class="font-medium text-vault-100">{{ h.symbol }}</div>
+                  <div class="text-xs text-vault-500">{{ h.tx_count }} transaction(s)</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <span class="badge text-[11px] py-1 px-2.5"
+                    style="background: rgba(232,169,36,0.1); color: #E8A924;">{{ h.category }}</span>
+            </td>
+            <td class="px-6 py-4 text-right text-vault-200">{{ "{:,.4f}".format(h.qty) }}</td>
+            <td class="px-6 py-4 text-right text-vault-400">{{ currency_symbol }}{{ "{:,.2f}".format(h.cost) }}</td>
+            <td class="px-6 py-4 text-right font-medium text-vault-100">{{ currency_symbol }}{{ "{:,.2f}".format(h.price) }}</td>
+            <td class="px-6 py-4 text-right font-semibold">{{ currency_symbol }}{{ "{:,.2f}".format(h.value) }}</td>
+            <td class="px-6 py-4 text-right font-medium {% if h.is_positive %}text-gain{% else %}text-loss{% endif %}">
+              {% if h.is_positive %}+{% endif %}{{ currency_symbol }}{{ "{:,.2f}".format(h.gain|abs) }}
+            </td>
+            <td class="px-6 py-4 text-right">
+              <span class="badge {% if h.is_positive %}badge-gain{% else %}badge-loss{% endif %} text-xs">
+                <i class="fa-solid fa-arrow-{% if h.is_positive %}up{% else %}down{% endif %} text-[9px] mr-1"></i>
+                {{ "{:.1f}".format(h.gain_pct|abs) }}%
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    <div class="glass-card rounded-2xl p-16 text-center">
+      <div class="w-16 h-16 rounded-2xl bg-amber/10 flex items-center justify-center mx-auto mb-5">
+        <i class="fa-solid fa-briefcase text-2xl text-amber"></i>
+      </div>
+      <h2 class="font-display text-xl font-bold mb-2">No Holdings Yet</h2>
+      <p class="text-vault-400 max-w-sm mx-auto mb-6">Your portfolio is empty. Add your first buy transaction to start tracking your wealth.</p>
+      <a href="{{ url_for('add_entry') }}" class="btn-primary px-6 py-3 rounded-xl text-sm inline-flex items-center gap-2">
+        <span><i class="fa-solid fa-plus mr-2"></i>Add First Transaction</span>
+      </a>
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex min-h-screen bg-vault-950">
+  {% include 'sidebar.html' %}
+
+  <main class="flex-1 ml-64">
+    <header class="sticky top-0 z-20 bg-vault-950/80 backdrop-blur-xl border-b border-vault-700 px-8 py-4">
+      <div class="flex items-center gap-3 text-vault-400 text-sm">
+        <a href="{{ url_for('dashboard') }}" class="hover:text-vault-200 transition-colors"><i class="fa-solid fa-arrow-left"></i></a>
+        <span>/</span>
+        <span>Settings</span>
+      </div>
+      <h2 class="font-display text-xl font-bold mt-1">Edit Profile</h2>
+    </header>
+
+    <div class="p-8 max-w-3xl">
+      <form method="POST" action="{{ url_for('edit_profile') }}">
+        
+        <!-- Personal Details -->
+        <div class="glass-card rounded-2xl p-6 mb-6">
+          <h3 class="font-display text-lg font-semibold mb-1">Personal Details</h3>
+          <p class="text-vault-400 text-sm mb-6">Update your name and basic information.</p>
+          
+          <div class="grid grid-cols-2 gap-5 mb-5">
+            <div class="form-group">
+              <label for="profile-first">First Name</label>
+              <input type="text" name="first_name" id="profile-first" class="vault-input w-full px-4 py-3 rounded-xl text-sm" value="{{ first_name }}" required>
+            </div>
+            <div class="form-group">
+              <label for="profile-last">Last Name</label>
+              <input type="text" name="last_name" id="profile-last" class="vault-input w-full px-4 py-3 rounded-xl text-sm" value="{{ last_name }}" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio Settings -->
+        <div class="glass-card rounded-2xl p-6 mb-6">
+          <h3 class="font-display text-lg font-semibold mb-1">Portfolio Settings</h3>
+          <p class="text-vault-400 text-sm mb-6">Customize how your portfolio is displayed.</p>
+
+          <div class="form-group mb-5">
+            <label for="portfolio-name">Portfolio Name</label>
+            <input type="text" name="portfolio_name" id="portfolio-name" class="vault-input w-full px-4 py-3 rounded-xl text-sm" value="{{ portfolio_name }}" required>
+          </div>
+
+          <div class="form-group mb-5">
+            <label>Base Currency</label>
+            <div class="grid grid-cols-4 gap-2" id="currency-options">
+              <button type="button" onclick="selectOption('currency', 'INR', this)" class="currency-opt btn-ghost py-3 rounded-xl text-sm text-center font-medium" style="border-color: var(--accent); color: var(--accent); background: var(--accent-glow);" data-value="INR">₹ INR</button>
+              <button type="button" onclick="selectOption('currency', 'USD', this)" class="currency-opt btn-ghost py-3 rounded-xl text-sm text-center font-medium" data-value="USD">$ USD</button>
+              <button type="button" onclick="selectOption('currency', 'EUR', this)" class="currency-opt btn-ghost py-3 rounded-xl text-sm text-center font-medium" data-value="EUR">€ EUR</button>
+              <button type="button" onclick="selectOption('currency', 'GBP', this)" class="currency-opt btn-ghost py-3 rounded-xl text-sm text-center font-medium" data-value="GBP">£ GBP</button>
+            </div>
+            <input type="hidden" name="currency" id="selected-currency" value="INR">
+          </div>
+          
+          <div class="form-group mb-5">
+            <label>Asset Categories</label>
+            <div class="grid grid-cols-2 gap-3" id="category-options">
+              <button type="button" onclick="toggleCategory(this)" class="cat-opt btn-ghost py-4 px-4 rounded-xl text-sm text-left flex items-center gap-3" data-active="true" style="border-color: var(--accent); background: var(--accent-glow);">
+                <i class="fa-solid fa-chart-line text-amber text-lg"></i>
+                <div><div class="font-medium">Stocks</div><div class="text-vault-500 text-xs">Equities & ETFs</div></div>
+              </button>
+              <button type="button" onclick="toggleCategory(this)" class="cat-opt btn-ghost py-4 px-4 rounded-xl text-sm text-left flex items-center gap-3" data-active="true" style="border-color: var(--accent); background: var(--accent-glow);">
+                <i class="fa-brands fa-bitcoin text-amber text-lg"></i>
+                <div><div class="font-medium">Crypto</div><div class="text-vault-500 text-xs">Tokens & Coins</div></div>
+              </button>
+              <button type="button" onclick="toggleCategory(this)" class="cat-opt btn-ghost py-4 px-4 rounded-xl text-sm text-left flex items-center gap-3">
+                <i class="fa-solid fa-building-columns text-vault-400 text-lg"></i>
+                <div><div class="font-medium">Bonds</div><div class="text-vault-500 text-xs">Fixed Income</div></div>
+              </button>
+              <button type="button" onclick="toggleCategory(this)" class="cat-opt btn-ghost py-4 px-4 rounded-xl text-sm text-left flex items-center gap-3">
+                <i class="fa-solid fa-gem text-vault-400 text-lg"></i>
+                <div><div class="font-medium">Commodities</div><div class="text-vault-500 text-xs">Gold, Silver, etc.</div></div>
+              </button>
+              <button type="button" onclick="toggleCategory(this)" class="cat-opt btn-ghost py-4 px-4 rounded-xl text-sm text-left flex items-center gap-3">
+                <i class="fa-solid fa-house text-vault-400 text-lg"></i>
+                <div><div class="font-medium">Real Estate</div><div class="text-vault-500 text-xs">Properties & REITs</div></div>
+              </button>
+              <button type="button" onclick="toggleCategory(this)" class="cat-opt btn-ghost py-4 px-4 rounded-xl text-sm text-left flex items-center gap-3">
+                <i class="fa-solid fa-wallet text-vault-400 text-lg"></i>
+                <div><div class="font-medium">Cash</div><div class="text-vault-500 text-xs">Savings & Deposits</div></div>
+              </button>
+            </div>
+            <!-- Normally we would use a hidden input array for this in a real DB -->
+          </div>
+        </div>
+
+        <div class="flex gap-3">
+          <a href="{{ url_for('dashboard') }}" class="btn-ghost flex-1 py-3.5 rounded-xl text-sm font-display text-center inline-block leading-loose">Cancel</a>
+          <button type="submit" class="btn-primary flex-1 py-3.5 rounded-xl text-sm font-display"><span>Save Changes</span></button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function selectOption(type, value, btn) {
+    document.getElementById('selected-currency').value = value;
+    document.querySelectorAll('.currency-opt').forEach(b => {
+      b.classList.remove('border-amber', 'text-amber', 'bg-amber/10');
+      b.style.borderColor = '';
+      b.style.color = '';
+      b.style.background = '';
+    });
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color = 'var(--accent)';
+    btn.style.background = 'var(--accent-glow)';
+  }
+
+  function toggleCategory(btn) {
+    const isActive = btn.dataset.active === 'true';
+    btn.dataset.active = isActive ? 'false' : 'true';
+    const icon = btn.querySelector('i');
+    if (!isActive) {
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.background = 'var(--accent-glow)';
+      if (icon) icon.className = icon.className.replace('text-vault-400', 'text-amber');
+    } else {
+      btn.style.borderColor = '';
+      btn.style.background = '';
+      if (icon) icon.className = icon.className.replace('text-amber', 'text-vault-400');
+    }
+  }
+</script>
+{% endblock %}
