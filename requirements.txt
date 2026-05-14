@@ -1,6 +1,6 @@
 flask
 flask-mysqldb
-
+mysql-connector-python
 python-dotenv
 werkzeug
 yfinance
