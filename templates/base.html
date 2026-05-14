@@ -1,345 +1,70 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vaultfolio — Portfolio Tracker</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            display: ['Space Grotesk', 'sans-serif'],
-            body: ['DM Sans', 'sans-serif'],
-          },
-          colors: {
-            vault: {
-              950: '#0a0a0c',
-              900: '#111115',
-              850: '#16161b',
-              800: '#1c1c23',
-              700: '#2a2a35',
-              600: '#3a3a48',
-              500: '#55556a',
-              400: '#7a7a94',
-              300: '#a0a0b8',
-              200: '#c8c8d8',
-              100: '#e8e8f0',
-            },
-            amber: {
-              DEFAULT: '#E8A924',
-              light: '#F5C563',
-              dark: '#C48A0A',
-              glow: 'rgba(232,169,36,0.15)',
-            },
-            gain: '#22C55E',
-            loss: '#EF4444',
-          }
-        }
-      }
-    }
-  </script>
-
-  <style>
-    :root {
-      --bg: #0a0a0c;
-      --bg-card: #16161b;
-      --bg-elevated: #1c1c23;
-      --border: #2a2a35;
-      --fg: #e8e8f0;
-      --fg-muted: #7a7a94;
-      --accent: #E8A924;
-      --accent-glow: rgba(232,169,36,0.15);
-      --gain: #22C55E;
-      --loss: #EF4444;
-    }
-
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--fg);
-      overflow-x: hidden;
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--fg-muted); }
-
-    /* Animated mesh gradient background for auth pages */
-    .auth-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      overflow: hidden;
-    }
-    .auth-bg::before {
-      content: '';
-      position: absolute;
-      width: 600px; height: 600px;
-      top: -100px; left: -100px;
-      background: radial-gradient(circle, rgba(232,169,36,0.08) 0%, transparent 70%);
-      animation: floatBlob1 18s ease-in-out infinite;
-    }
-    .auth-bg::after {
-      content: '';
-      position: absolute;
-      width: 500px; height: 500px;
-      bottom: -80px; right: -80px;
-      background: radial-gradient(circle, rgba(232,169,36,0.05) 0%, transparent 70%);
-      animation: floatBlob2 22s ease-in-out infinite;
-    }
-    .auth-blob-center {
-      position: absolute;
-      width: 400px; height: 400px;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: radial-gradient(circle, rgba(232,169,36,0.04) 0%, transparent 70%);
-      animation: floatBlob3 15s ease-in-out infinite;
-    }
-
-    @keyframes floatBlob1 {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(80px, 60px) scale(1.1); }
-      66% { transform: translate(-40px, 100px) scale(0.95); }
-    }
-    @keyframes floatBlob2 {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(-60px, -80px) scale(1.15); }
-      66% { transform: translate(50px, -40px) scale(0.9); }
-    }
-    @keyframes floatBlob3 {
-      0%, 100% { transform: translate(-50%, -50%) scale(1); }
-      50% { transform: translate(-50%, -50%) scale(1.3); }
-    }
-
-    /* Grid pattern overlay */
-    .grid-pattern {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      background-image:
-        linear-gradient(rgba(42,42,53,0.3) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(42,42,53,0.3) 1px, transparent 1px);
-      background-size: 60px 60px;
-      mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, black 20%, transparent 70%);
-    }
-
-    /* Glass card */
-    .glass-card {
-      background: rgba(22,22,27,0.8);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--border);
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    }
-    .glass-card:hover {
-      border-color: rgba(232,169,36,0.2);
-      box-shadow: 0 0 30px rgba(232,169,36,0.04);
-    }
-
-    /* Input styles */
-    .vault-input {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--fg);
-      transition: border-color 0.25s, box-shadow 0.25s;
-      outline: none;
-    }
-    .vault-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
-    }
-    .vault-input::placeholder { color: var(--fg-muted); }
-
-    /* Button styles */
-    .btn-primary {
-      background: linear-gradient(135deg, #E8A924 0%, #C48A0A 100%);
-      color: #0a0a0c;
-      font-weight: 600;
-      transition: all 0.25s ease;
-      position: relative;
-      overflow: hidden;
-    }
-    .btn-primary::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, #F5C563 0%, #E8A924 100%);
-      opacity: 0;
-      transition: opacity 0.25s;
-    }
-    .btn-primary:hover::before { opacity: 1; }
-    .btn-primary:active { transform: scale(0.98); }
-    .btn-primary span { position: relative; z-index: 1; }
-
-    .btn-ghost {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--fg);
-      transition: all 0.25s ease;
-    }
-    .btn-ghost:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--accent-glow);
-    }
-
-    /* Sidebar nav item */
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 16px;
-      border-radius: 10px;
-      color: var(--fg-muted);
-      transition: all 0.2s ease;
-      cursor: pointer;
-      font-size: 14px;
-      text-decoration: none;
-    }
-    .nav-item:hover { color: var(--fg); background: rgba(255,255,255,0.03); }
-    .nav-item.active {
-      color: var(--accent);
-      background: var(--accent-glow);
-    }
-    .nav-item.active i { color: var(--accent); }
-
-    /* Stat card shine */
-    .stat-card {
-      position: relative;
-      overflow: hidden;
-    }
-    .stat-card::after {
-      content: '';
-      position: absolute;
-      top: 0; left: -100%;
-      width: 50%; height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.02), transparent);
-      transition: left 0.6s ease;
-    }
-    .stat-card:hover::after { left: 100%; }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      top: 24px;
-      right: 24px;
-      z-index: 9999;
-      padding: 14px 20px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 500;
-      transform: translateX(120%);
-      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-      max-width: 360px;
-    }
-    .toast.show { transform: translateX(0); }
-    .toast.success { background: #16a34a; color: white; }
-    .toast.error { background: #dc2626; color: white; }
-    .toast.info { background: var(--bg-elevated); color: var(--fg); border: 1px solid var(--border); }
-
-    /* Floating label effect */
-    .form-group { position: relative; }
-    .form-group label {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--fg-muted);
-      margin-bottom: 6px;
-      display: block;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    /* Badge */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 3px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .badge-gain { background: rgba(34,197,94,0.12); color: var(--gain); }
-    .badge-loss { background: rgba(239,68,68,0.12); color: var(--loss); }
-
-    /* Select styling */
-    .vault-select {
-      appearance: none;
-      background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237a7a94' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E") no-repeat right 14px center;
-      border: 1px solid var(--border);
-      color: var(--fg);
-      transition: border-color 0.25s, box-shadow 0.25s;
-      outline: none;
-    }
-    .vault-select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vaultfolio | Professional Portfolio Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    {% block extra_css %}{% endblock %}
-  </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vault: {
+                            50: '#f8f8f9', 100: '#e8e8f0', 200: '#d1d1e1', 300: '#b1b1cc', 
+                            400: '#8c8cb3', 500: '#6d6d99', 600: '#56567d', 700: '#464663', 
+                            800: '#3a3a4f', 850: '#2a2a35', 900: '#16161b', 950: '#0b0b0e'
+                        },
+                        amber: { DEFAULT: '#E8A924', dark: '#C78E1A' },
+                        gain: '#22C55E', loss: '#EF4444'
+                    },
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        sans: ['DM Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0b0b0e; color: #e8e8f0; font-family: 'DM Sans', sans-serif; }
+        .glass-card { background: rgba(22, 22, 27, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .nav-item { @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300; }
+        .nav-item:hover { background: rgba(232, 169, 36, 0.1); color: #E8A924; }
+        .nav-item.active { background: #E8A924; color: #0b0b0e; font-weight: 600; }
+        .btn-primary { background: #E8A924; color: #0b0b0e; @apply font-semibold py-3 px-6 rounded-xl hover:bg-amber-dark transition-all shadow-lg shadow-amber/10; }
+        .btn-ghost { background: rgba(255, 255, 255, 0.05); @apply py-3 px-6 rounded-xl hover:bg-white/10 transition-all border border-white/5; }
+        input, select, textarea { background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; @apply rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber/50 outline-none transition-all; }
+        .badge { @apply px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider; }
+        .badge-gain { background: rgba(34, 197, 94, 0.1); color: #22C55E; }
+        .badge-loss { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+    </style>
 </head>
-<body>
-
-  <!-- Toast container -->
-  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
-
-  <!-- Render Flash Messages -->
-  <div id="flash-messages" style="display: none;">
+<body class="antialiased">
+    
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        {% for category, message in messages %}
-          <div data-category="{{ category }}" data-message="{{ message }}"></div>
-        {% endfor %}
+        <div class="fixed top-6 right-6 z-50 flex flex-col gap-3">
+          {% for category, message in messages %}
+            <div class="px-5 py-3 rounded-xl border flex items-center gap-3 animate-slide-in 
+                {% if category == 'error' %} bg-loss/10 border-loss/20 text-loss {% else %} bg-gain/10 border-gain/20 text-gain {% endif %} shadow-2xl">
+              <i class="fa-solid {% if category == 'error' %}fa-circle-xmark{% else %}fa-circle-check{% endif %}"></i>
+              <span class="text-sm font-medium">{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
       {% endif %}
     {% endwith %}
-  </div>
 
-  {% block content %}{% endblock %}
+    {% block content %}{% endblock %}
 
-  <script>
-    // ==================== TOAST ====================
-    function showToast(message, type = 'info') {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.className = 'toast ' + type;
-      requestAnimationFrame(() => toast.classList.add('show'));
-      setTimeout(() => toast.classList.remove('show'), 3500);
-    }
-
-    // Process flash messages on load
-    document.addEventListener('DOMContentLoaded', () => {
-      const msgs = document.querySelectorAll('#flash-messages div');
-      if (msgs.length > 0) {
-        // Show only the first one to avoid overlapping, or queue them
-        const msg = msgs[0];
-        let type = msg.dataset.category;
-        if(type === 'message') type = 'info';
-        showToast(msg.dataset.message, type);
-      }
-    });
-
-    function togglePassword(inputId, btn) {
-      const input = document.getElementById(inputId);
-      const icon = btn.querySelector('i');
-      if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'fa-regular fa-eye-slash text-sm';
-      } else {
-        input.type = 'password';
-        icon.className = 'fa-regular fa-eye text-sm';
-      }
-    }
-  </script>
-  
-  {% block scripts %}{% endblock %}
-
+    {% block scripts %}{% endblock %}
 </body>
 </html>
