@@ -26,10 +26,10 @@
     <div class="pt-4 mt-4 border-t border-vault-700">
       <p class="px-4 text-[10px] uppercase tracking-widest text-vault-500 mb-2">Portfolios</p>
       
-      {% set portfolios = session.get('portfolios', [{'name': session.get('portfolio_name', 'My Portfolio')}]) %}
+      {% set portfolios = session.get('portfolios', []) %}
       {% for p in portfolios %}
-      <a href="{{ url_for('switch_portfolio', index=loop.index0) }}" class="nav-item {% if p.name == session.get('portfolio_name', 'My Portfolio') %}active{% endif %}">
-        {% if p.name == session.get('portfolio_name', 'My Portfolio') %}<div class="pulse-dot"></div>{% else %}<i class="fa-solid fa-briefcase w-3 text-center text-xs"></i>{% endif %} {{ p.name }}
+      <a href="{{ url_for('switch_portfolio', id=p.id) }}" class="nav-item {% if p.id == session.get('portfolio_id') %}active{% endif %}">
+        {% if p.id == session.get('portfolio_id') %}<div class="pulse-dot"></div>{% else %}<i class="fa-solid fa-briefcase w-3 text-center text-xs"></i>{% endif %} {{ p.name }}
       </a>
       {% endfor %}
 

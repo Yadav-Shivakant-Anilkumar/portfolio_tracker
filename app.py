@@ -59,7 +59,6 @@ def get_live_price(symbol: str) -> float:
             row = cur.fetchone()
             if row:
                 price, fetched_at = row[0], row[1]
-                # Cache valid for 15 minutes
                 if datetime.now() - fetched_at < timedelta(minutes=15):
                     cur.close()
                     return float(price)
@@ -230,7 +229,7 @@ def logout():
     return redirect(url_for('login'))
 
 # ─────────────────────────────────────────────────
-# 7. Portfolio & Transactions
+# 7. Portfolio Management
 # ─────────────────────────────────────────────────
 @app.route('/setup/<int:step>', methods=['GET', 'POST'])
 @login_required
@@ -264,8 +263,25 @@ def setup(step):
             return redirect(url_for('dashboard'))
     return render_template('setup.html', step=step)
 
-@app.route('/dashboard')
+@app.route('/switch_portfolio/<int:id>')
+@login_required
+def switch_portfolio(id):
+    if mysql:
+        cur = mysql.connection.cursor()
+        cur.execute("SELECT name, base_currency FROM portfolios WHERE id = %s AND user_id = %s", (id, session['user_id']))
+        p = cur.fetchone()
+        if p:
+            session['portfolio_id'] = id
+            session['portfolio_name'] = p[0]
+            session['portfolio_currency'] = p[1]
+        cur.close()
+    return redirect(url_for('dashboard'))
+
+# ─────────────────────────────────────────────────
+# 8. Main Application Routes
+# ─────────────────────────────────────────────────
 @app.route('/')
+@app.route('/dashboard')
 @login_required
 def dashboard():
     portfolio_id = session.get('portfolio_id')
@@ -309,34 +325,49 @@ def dashboard():
     
     return render_template('dashboard.html', portfolio=portfolio, holdings=holdings, recent_transactions=recent_transactions, allocation_json=json.dumps({'labels': alloc_labels, 'values': alloc_values}))
 
-@app.route('/add_entry', methods=['GET', 'POST'])
+@app.route('/analytics')
 @login_required
-def add_entry():
-    if request.method == 'POST':
-        asset = request.form.get('asset_symbol', 'UNKNOWN').upper()
-        name = request.form.get('asset_name', '').strip() or None
-        tx_type = request.form.get('tx_type', 'buy')
-        try:
-            qty, price, fees = float(request.form.get('quantity', 0)), float(request.form.get('price', 0)), float(request.form.get('fees', 0))
-        except: qty, price, fees = 0, 0, 0
-        
-        date, cat, notes = request.form.get('entry_date'), request.form.get('category', 'stocks'), request.form.get('notes', '')
-        pid, uid = session.get('portfolio_id'), session.get('user_id')
+def analytics():
+    portfolio_id = session.get('portfolio_id')
+    currency_symbol = CURRENCY_SYMBOLS.get(session.get('portfolio_currency', 'INR'), '₹')
+    allocation_json = json.dumps({'labels': [], 'values': []})
 
-        if mysql and pid and qty > 0:
-            cur = mysql.connection.cursor()
-            cur.execute("INSERT INTO transactions (user_id, portfolio_id, type, asset_symbol, asset_name, category, quantity, price, fees, transaction_date, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", 
-                        (uid, pid, tx_type, asset, name, cat, qty, price, fees, date, notes))
-            mysql.connection.commit()
-            cur.close()
-            flash(f"Recorded {tx_type} of {asset}", "success")
-            return redirect(url_for('dashboard'))
-    return render_template('add_entry.html')
+    if mysql and portfolio_id:
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            SELECT category, SUM(total_val) FROM (
+                SELECT category, SUM(CASE WHEN type='buy' THEN quantity ELSE -quantity END) * 
+                       (SELECT last_price FROM price_cache WHERE asset_symbol = t.asset_symbol LIMIT 1) as total_val
+                FROM transactions t WHERE portfolio_id = %s GROUP BY asset_symbol, category
+            ) as sub GROUP BY category
+        """, [portfolio_id])
+        # Note: Above query is simplified; real logic might need better price fetching.
+        # For now, let's use the dashboard's logic for accuracy.
+        cur.execute("""
+            SELECT asset_symbol, category, SUM(CASE WHEN type='buy' THEN quantity ELSE -quantity END) as total_qty
+            FROM transactions WHERE portfolio_id = %s GROUP BY asset_symbol, category HAVING total_qty > 0
+        """, [portfolio_id])
+        rows = cur.fetchall()
+        cur.close()
+        
+        alloc = {}
+        total_val = 0.0
+        for row in rows:
+            sym, cat, qty = row[0], row[1].capitalize(), float(row[2])
+            price = get_live_price(sym)
+            val = price * qty
+            alloc[cat] = alloc.get(cat, 0.0) + val
+            total_val += val
+            
+        labels = list(alloc.keys())
+        values = [round(v / total_val * 100, 1) if total_val > 0 else 0 for v in alloc.values()]
+        allocation_json = json.dumps({'labels': labels, 'values': values})
+
+    return render_template('analytics.html', allocation_json=allocation_json, currency_symbol=currency_symbol)
 
 @app.route('/holdings')
 @login_required
 def holdings():
-    # Similar to dashboard logic but for the full list
     portfolio_id = session.get('portfolio_id')
     currency_symbol = CURRENCY_SYMBOLS.get(session.get('portfolio_currency', 'INR'), '₹')
     holdings_list = []
@@ -373,15 +404,44 @@ def transactions():
         cur.close()
     return render_template('transactions.html', transactions=txs, currency_symbol=currency_symbol)
 
+@app.route('/add_entry', methods=['GET', 'POST'])
+@login_required
+def add_entry():
+    if request.method == 'POST':
+        asset = request.form.get('asset_symbol', 'UNKNOWN').upper()
+        name = request.form.get('asset_name', '').strip() or None
+        tx_type = request.form.get('tx_type', 'buy')
+        try:
+            qty, price, fees = float(request.form.get('quantity', 0)), float(request.form.get('price', 0)), float(request.form.get('fees', 0))
+        except: qty, price, fees = 0, 0, 0
+        date, cat, notes = request.form.get('entry_date'), request.form.get('category', 'stocks'), request.form.get('notes', '')
+        pid, uid = session.get('portfolio_id'), session.get('user_id')
+        if mysql and pid and qty > 0:
+            cur = mysql.connection.cursor()
+            cur.execute("INSERT INTO transactions (user_id, portfolio_id, type, asset_symbol, asset_name, category, quantity, price, fees, transaction_date, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", 
+                        (uid, pid, tx_type, asset, name, cat, qty, price, fees, date, notes))
+            mysql.connection.commit()
+            cur.close()
+            flash(f"Recorded {tx_type} of {asset}", "success")
+            return redirect(url_for('dashboard'))
+    return render_template('add_entry.html')
+
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
     uid = session.get('user_id')
+    pid = session.get('portfolio_id')
     if request.method == 'POST':
         f, l, p = request.form.get('first_name'), request.form.get('last_name'), request.form.get('phone')
+        p_name = request.form.get('portfolio_name')
+        p_desc = request.form.get('portfolio_description', '').strip() or None
+        
         if mysql and uid:
             cur = mysql.connection.cursor()
             cur.execute("UPDATE users SET first_name=%s, last_name=%s, phone=%s WHERE id=%s", (f, l, p or None, uid))
+            if pid and p_name:
+                cur.execute("UPDATE portfolios SET name=%s, description=%s WHERE id=%s", (p_name, p_desc, pid))
+                session['portfolio_name'] = p_name
             mysql.connection.commit()
             cur.close()
             session['user_name'] = f"{f} {l}".strip()
@@ -394,6 +454,12 @@ def edit_profile():
         cur.execute("SELECT first_name, last_name, email, phone FROM users WHERE id=%s", [uid])
         r = cur.fetchone()
         if r: user_data = {'first_name': r[0], 'last_name': r[1] or '', 'email': r[2], 'phone': r[3] or ''}
+        if pid:
+            cur.execute("SELECT name, description FROM portfolios WHERE id=%s", [pid])
+            p = cur.fetchone()
+            if p:
+                user_data['portfolio_name'] = p[0]
+                user_data['portfolio_description'] = p[1] or ''
         cur.close()
     return render_template('edit_profile.html', **user_data)
 
