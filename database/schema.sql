@@ -103,20 +103,5 @@ CREATE TABLE IF NOT EXISTS price_cache (
     fetched_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- =============================================================
--- TABLE: oauth_providers
--- Links external OAuth accounts (Google, GitHub) to local users.
--- =============================================================
-CREATE TABLE IF NOT EXISTS oauth_providers (
-    id               INT PRIMARY KEY AUTO_INCREMENT,
-    user_id          INT          NOT NULL,
-    provider         VARCHAR(30)  NOT NULL,              -- 'google' or 'github'
-    provider_user_id VARCHAR(255) NOT NULL,              -- ID from the OAuth provider
-    provider_email   VARCHAR(150) DEFAULT NULL,          -- email returned by provider
-    access_token     TEXT         DEFAULT NULL,          -- stored for API calls (optional)
-    created_at       TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_oauth_provider_user (provider, provider_user_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
 
-CREATE INDEX idx_oauth_user ON oauth_providers (user_id);
+
