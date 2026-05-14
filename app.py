@@ -2,9 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from flask_mysqldb import MySQL
-from flask_dance.contrib.google import make_google_blueprint, google
-from flask_dance.contrib.github import make_github_blueprint, github
-from flask_dance.consumer import oauth_authorized
 import config
 from datetime import datetime
 import json
@@ -128,8 +125,6 @@ def login_required(f):
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "vaultfolio_super_secret_key_change_in_prod")
-# Required for OAuth over HTTP in development (NEVER use in production)
-os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
 
 # MySQL Config
 app.config['MYSQL_HOST']     = config.MYSQL_HOST
@@ -142,158 +137,6 @@ try:
 except Exception as e:
     print(f"Error initializing MySQL: {e}")
     mysql = None
-
-# ─────────────────────────────────────────────────
-# OAuth Blueprints  (Google & GitHub)
-# ─────────────────────────────────────────────────
-google_bp = make_google_blueprint(
-    client_id     = config.GOOGLE_CLIENT_ID,
-    client_secret = config.GOOGLE_CLIENT_SECRET,
-    scope         = ['openid', 'https://www.googleapis.com/auth/userinfo.email',
-                     'https://www.googleapis.com/auth/userinfo.profile'],
-    redirect_to   = 'google_oauth_callback',
-)
-github_bp = make_github_blueprint(
-    client_id     = config.GITHUB_CLIENT_ID,
-    client_secret = config.GITHUB_CLIENT_SECRET,
-    scope         = 'user:email',
-    redirect_to   = 'github_oauth_callback',
-)
-app.register_blueprint(google_bp, url_prefix='/login')
-app.register_blueprint(github_bp, url_prefix='/login')
-
-# ─────────────────────────────────────────────────
-# Shared OAuth helper: find-or-create user
-# ─────────────────────────────────────────────────
-def _oauth_login_or_register(provider: str, provider_user_id: str, email: str,
-                              first_name: str, last_name: str, access_token: str = None):
-    """Find an existing user linked to this OAuth account, or create one.
-    Sets the Flask session and returns True on success."""
-    if not mysql or not email:
-        flash("OAuth login failed: could not retrieve your email.", "error")
-        return False
-
-    cur = mysql.connection.cursor()
-    try:
-        # 1) Check if this provider account is already linked
-        cur.execute(
-            "SELECT user_id FROM oauth_providers WHERE provider=%s AND provider_user_id=%s",
-            (provider, str(provider_user_id))
-        )
-        row = cur.fetchone()
-
-        if row:
-            # Provider already linked — fetch user and log in
-            user_id = row[0]
-            cur.execute("SELECT first_name, last_name FROM users WHERE id=%s", [user_id])
-            u = cur.fetchone()
-            session['user_id']   = user_id
-            session['user_name'] = f"{u[0]} {u[1]}".strip() if u else email.split('@')[0]
-        else:
-            # 2) Check if the email is already registered (local account)
-            cur.execute("SELECT id, first_name, last_name FROM users WHERE email=%s", [email])
-            existing = cur.fetchone()
-
-            if existing:
-                # Link this provider to the existing account
-                user_id = existing[0]
-                session['user_name'] = f"{existing[1]} {existing[2]}".strip()
-            else:
-                # 3) Brand-new user — create a local account with a random password
-                import secrets
-                dummy_pw = generate_password_hash(secrets.token_hex(16))
-                cur.execute(
-                    "INSERT INTO users (first_name, last_name, email, password_hash) VALUES (%s,%s,%s,%s)",
-                    (first_name, last_name, email, dummy_pw)
-                )
-                mysql.connection.commit()
-                user_id = cur.lastrowid
-                session['user_name'] = f"{first_name} {last_name}".strip()
-
-            # Link this OAuth provider to the user
-            cur.execute(
-                """INSERT INTO oauth_providers (user_id, provider, provider_user_id, provider_email, access_token)
-                   VALUES (%s, %s, %s, %s, %s)
-                   ON DUPLICATE KEY UPDATE provider_email=%s, access_token=%s""",
-                (user_id, provider, str(provider_user_id), email, access_token,
-                 email, access_token)
-            )
-            mysql.connection.commit()
-
-            session['user_id'] = user_id
-
-        cur.close()
-        return True
-    except Exception as e:
-        print(f"OAuth DB error: {e}")
-        cur.close()
-        flash("An error occurred during login. Please try again.", "error")
-        return False
-
-
-# ─────────────────────────────────────────────────
-# OAuth Callback Routes
-# ─────────────────────────────────────────────────
-@app.route('/oauth/google/callback')
-def google_oauth_callback():
-    if not google.authorized:
-        flash("Google authorization failed or was cancelled.", "error")
-        return redirect(url_for('login'))
-    try:
-        resp = google.get('/oauth2/v2/userinfo')
-        if not resp.ok:
-            flash("Failed to fetch your Google profile.", "error")
-            return redirect(url_for('login'))
-        info        = resp.json()
-        provider_id = info.get('id', '')
-        email       = info.get('email', '')
-        first_name  = info.get('given_name', email.split('@')[0])
-        last_name   = info.get('family_name', '')
-        token       = google.token.get('access_token', '') if google.token else ''
-
-        if _oauth_login_or_register('google', provider_id, email, first_name, last_name, token):
-            flash(f"Welcome, {session.get('user_name', '')}! Signed in with Google.", "success")
-            return redirect(url_for('dashboard'))
-    except Exception as e:
-        print(f"Google callback error: {e}")
-        flash("Google login failed. Please try again.", "error")
-    return redirect(url_for('login'))
-
-
-@app.route('/oauth/github/callback')
-def github_oauth_callback():
-    if not github.authorized:
-        flash("GitHub authorization failed or was cancelled.", "error")
-        return redirect(url_for('login'))
-    try:
-        resp = github.get('/user')
-        if not resp.ok:
-            flash("Failed to fetch your GitHub profile.", "error")
-            return redirect(url_for('login'))
-        info        = resp.json()
-        provider_id = str(info.get('id', ''))
-        name_parts  = (info.get('name') or info.get('login', 'GitHub User')).split(' ', 1)
-        first_name  = name_parts[0]
-        last_name   = name_parts[1] if len(name_parts) > 1 else ''
-        token       = github.token.get('access_token', '') if github.token else ''
-
-        # GitHub may not return email in /user — fetch from /user/emails
-        email = info.get('email') or ''
-        if not email:
-            emails_resp = github.get('/user/emails')
-            if emails_resp.ok:
-                for e in emails_resp.json():
-                    if e.get('primary') and e.get('verified'):
-                        email = e.get('email', '')
-                        break
-
-        if _oauth_login_or_register('github', provider_id, email, first_name, last_name, token):
-            flash(f"Welcome, {session.get('user_name', '')}! Signed in with GitHub.", "success")
-            return redirect(url_for('dashboard'))
-    except Exception as e:
-        print(f"GitHub callback error: {e}")
-        flash("GitHub login failed. Please try again.", "error")
-    return redirect(url_for('login'))
 
 @app.before_request
 def fetch_portfolios():
