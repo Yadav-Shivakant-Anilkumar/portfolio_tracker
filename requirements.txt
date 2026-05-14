@@ -1,5 +1,7 @@
 flask
 flask-mysqldb
+flask-dance
 python-dotenv
 werkzeug
 yfinance
+requests

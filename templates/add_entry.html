@@ -103,15 +103,7 @@
     }
   });
 
-  const assetSearchData = [
-    { symbol: 'AAPL', name: 'Apple Inc.', category: 'Stocks', price: 189.84, change: 1.2 },
-    { symbol: 'MSFT', name: 'Microsoft Corp.', category: 'Stocks', price: 415.26, change: 0.8 },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', category: 'Stocks', price: 155.72, change: -0.5 },
-    { symbol: 'TSLA', name: 'Tesla Inc.', category: 'Stocks', price: 248.42, change: -1.8 },
-    { symbol: 'BTC', name: 'Bitcoin', category: 'Crypto', price: 67432.10, change: 3.2 },
-    { symbol: 'ETH', name: 'Ethereum', category: 'Crypto', price: 3521.80, change: 2.1 },
-    { symbol: 'SOL', name: 'Solana', category: 'Crypto', price: 172.30, change: 5.8 }
-  ];
+  let searchTimeout = null;
 
   function selectTxType(type, btn) {
     document.getElementById('selected-tx-type').value = type;
@@ -127,57 +119,82 @@
 
   function filterAssets(query) {
     const dropdown = document.getElementById('asset-dropdown');
-    if (!query.trim()) { dropdown.style.display = 'none'; return; }
-
-    const filtered = assetSearchData.filter(a =>
-      a.symbol.toLowerCase().includes(query.toLowerCase()) ||
-      a.name.toLowerCase().includes(query.toLowerCase())
-    );
-
-    if (filtered.length === 0) {
-      dropdown.style.display = 'none';
-      return;
+    if (!query.trim() || query.length < 2) { 
+        dropdown.style.display = 'none'; 
+        return; 
     }
 
-    dropdown.style.display = 'block';
-    dropdown.innerHTML = filtered.map(a => {
-      const changeColor = a.change >= 0 ? 'text-gain' : 'text-loss';
-      const arrow = a.change >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
-      return `
-        <button type="button" onclick="selectAsset('${a.symbol}')" class="w-full px-4 py-3 flex items-center gap-3 hover:bg-vault-700/50 transition-colors text-left">
-          <div class="w-9 h-9 rounded-lg bg-amber/10 flex items-center justify-center font-display font-bold text-amber text-xs">${a.symbol.slice(0,2)}</div>
-          <div class="flex-1">
-            <div class="font-medium text-sm">${a.symbol}</div>
-            <div class="text-vault-500 text-xs">${a.name}</div>
-          </div>
-          <div class="text-right">
-            <div class="text-sm font-mono">₹${a.price.toLocaleString('en-IN', {minimumFractionDigits:2})}</div>
-            <div class="text-xs ${changeColor}"><i class="fa-solid ${arrow} text-[9px]"></i> ${Math.abs(a.change).toFixed(1)}%</div>
-          </div>
-        </button>
-      `;
-    }).join('');
+    // Debounce the search
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch(`/api/search_assets?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+
+            if (data.length === 0) {
+                dropdown.innerHTML = `
+                    <div class="px-4 py-3 text-vault-500 text-xs italic">
+                        No matches found. You can still type the symbol manually.
+                    </div>
+                `;
+                dropdown.style.display = 'block';
+                return;
+            }
+
+            dropdown.style.display = 'block';
+            dropdown.innerHTML = data.map(a => `
+                <button type="button" 
+                        onclick="selectAsset('${a.symbol}', '${a.name.replace(/'/g, "\\'")}', '${a.category}')" 
+                        class="w-full px-4 py-3 flex items-center gap-3 hover:bg-vault-700/50 transition-colors text-left border-b border-vault-700 last:border-0">
+                    <div class="w-9 h-9 rounded-lg bg-amber/10 flex items-center justify-center font-display font-bold text-amber text-xs">
+                        ${a.symbol.slice(0,2)}
+                    </div>
+                    <div class="flex-1 overflow-hidden">
+                        <div class="font-medium text-sm truncate">${a.symbol}</div>
+                        <div class="text-vault-500 text-[10px] truncate">${a.name} (${a.exchange || 'Unknown'})</div>
+                    </div>
+                    <div class="text-vault-400 text-[10px] uppercase tracking-wider font-bold">
+                        ${a.category === 'equity' ? 'Stock' : a.category === 'cryptocurrency' ? 'Crypto' : a.category}
+                    </div>
+                </button>
+            `).join('');
+        } catch (err) {
+            console.error('Search failed:', err);
+        }
+    }, 300);
   }
 
-  function selectAsset(symbol) {
-    const asset = assetSearchData.find(a => a.symbol === symbol);
-    if (!asset) return;
-
+  function selectAsset(symbol, name, category) {
     document.getElementById('selected-asset').value = symbol;
-    document.getElementById('asset-search').value = symbol + ' — ' + asset.name;
-    document.getElementById('entry-price').value = asset.price;
+    document.getElementById('asset-search').value = symbol + ' — ' + name;
     document.getElementById('asset-dropdown').style.display = 'none';
     
-    // Select category
+    // Auto-detect category mapping
     const catSelect = document.getElementById('entry-category');
-    for (let i = 0; i < catSelect.options.length; i++) {
-        if (catSelect.options[i].text === asset.category) {
-            catSelect.selectedIndex = i;
-            break;
-        }
-    }
+    let targetVal = 'stocks';
+    if (category.includes('crypto')) targetVal = 'crypto';
     
-    calculateTotal();
+    catSelect.value = targetVal;
+    
+    // Fetch live price
+    fetchPrice(symbol);
+  }
+
+  async function fetchPrice(symbol) {
+    const priceInput = document.getElementById('entry-price');
+    priceInput.placeholder = "Loading price...";
+    try {
+        const response = await fetch(`/api/get_price/${symbol}`);
+        const data = await response.json();
+        if (data.price > 0) {
+            priceInput.value = data.price;
+            calculateTotal();
+        } else {
+            priceInput.placeholder = "0.00";
+        }
+    } catch (err) {
+        priceInput.placeholder = "0.00";
+    }
   }
 
   function calculateTotal() {
