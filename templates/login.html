@@ -51,12 +51,14 @@
       </div>
 
       <div class="grid grid-cols-2 gap-3">
-        <button type="button" onclick="showToast('Google OAuth would be connected here', 'info')" class="btn-ghost py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+        <a href="{{ url_for('google.login') }}" id="google-oauth-btn"
+           class="btn-ghost py-3 rounded-xl text-sm flex items-center justify-center gap-2 no-underline">
           <i class="fa-brands fa-google"></i> Google
-        </button>
-        <button type="button" onclick="showToast('GitHub OAuth would be connected here', 'info')" class="btn-ghost py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+        </a>
+        <a href="{{ url_for('github.login') }}" id="github-oauth-btn"
+           class="btn-ghost py-3 rounded-xl text-sm flex items-center justify-center gap-2 no-underline">
           <i class="fa-brands fa-github"></i> GitHub
-        </button>
+        </a>
       </div>
     </div>
 
