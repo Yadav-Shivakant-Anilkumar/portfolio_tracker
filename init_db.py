@@ -18,7 +18,7 @@ import mysql.connector
 if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-from config import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
+from config import MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
 
 # -------------------------------------------------------
 # Set to True to DROP the database and start completely fresh.
@@ -32,6 +32,7 @@ def run_init():
     print("  Portfolio Tracker - Database Initializer")
     print("=" * 55)
     print(f"  Host     : {MYSQL_HOST}")
+    print(f"  Port     : {MYSQL_PORT}")
     print(f"  User     : {MYSQL_USER}")
     print(f"  Database : {MYSQL_DB}")
     print(f"  Mode     : {'FRESH INSTALL (DROP + RECREATE)' if FORCE_DROP else 'SAFE (CREATE IF NOT EXISTS)'}")
@@ -41,6 +42,7 @@ def run_init():
         # Connect without a specific DB so we can manage the database itself
         conn = mysql.connector.connect(
             host=MYSQL_HOST,
+            port=MYSQL_PORT,
             user=MYSQL_USER,
             password=MYSQL_PASSWORD,
             autocommit=True,

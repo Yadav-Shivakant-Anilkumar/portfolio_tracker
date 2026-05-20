@@ -11,6 +11,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "vaultfolio_v2_secret_key")
 
 # MySQL Config
 app.config['MYSQL_HOST']     = config.MYSQL_HOST
+app.config['MYSQL_PORT']     = config.MYSQL_PORT
 app.config['MYSQL_USER']     = config.MYSQL_USER
 app.config['MYSQL_PASSWORD'] = config.MYSQL_PASSWORD
 app.config['MYSQL_DB']       = config.MYSQL_DB
@@ -198,7 +199,7 @@ def view_portfolio(id):
         'total_value': float(portfolio[3] + portfolio[4])
     }
     
-    return render_template('portfolio_detail.html', portfolio=p_data, transactions=transactions)
+    return render_template('portfolio_detail.html', portfolio=p_data, transactions=transactions, today=datetime.now().strftime('%Y-%m-%d'))
 
 @app.route('/portfolio/<int:id>/add_transaction', methods=['POST'])
 @login_required
