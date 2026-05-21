@@ -168,12 +168,29 @@ def setup_profile():
 @login_required
 def create_portfolio():
     if request.method == 'POST':
-        name = request.form.get('name')
+        name = request.form.get('name', '').strip()
         p_type = request.form.get('type')
         capital = float(request.form.get('capital', 0))
-        pl = float(request.form.get('pl', 0))
+        pl_val = float(request.form.get('pl', 0))
+        pl_type = request.form.get('pl_type', 'Profit')
+        
+        # Calculate signed P/L
+        pl = -abs(pl_val) if pl_type == 'Loss' else abs(pl_val)
         
         cur = mysql.connection.cursor()
+        
+        # Check if portfolio with exact name already exists for this user (case-sensitive)
+        cur.execute("SELECT id FROM portfolios WHERE user_id = %s AND BINARY name = %s", (session['user_id'], name))
+        if cur.fetchone():
+            flash(f"A portfolio named '{name}' already exists. Please choose a unique name.", "error")
+            cur.close()
+            return render_template('create_portfolio.html', 
+                                   name=name, 
+                                   p_type=p_type, 
+                                   capital=capital, 
+                                   pl=pl_val, 
+                                   pl_type=pl_type)
+        
         cur.execute("INSERT INTO portfolios (user_id, name, type, initial_capital, current_pl) VALUES (%s, %s, %s, %s, %s)",
                     (session['user_id'], name, p_type, capital, pl))
         mysql.connection.commit()

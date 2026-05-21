@@ -18,28 +18,39 @@
         <div>
           <label class="block text-xs font-semibold text-vault-400 uppercase tracking-widest mb-2 ml-1">Portfolio Name</label>
           <input type="text" name="name" placeholder="e.g. My Stocks" required
+                 value="{{ name or '' }}"
                  class="w-full bg-vault-850/50 border-vault-700">
         </div>
 
         <div>
           <label class="block text-xs font-semibold text-vault-400 uppercase tracking-widest mb-2 ml-1">Asset Category</label>
           <select name="type" class="w-full bg-vault-850 border-vault-700" required>
-            <option value="Stock">Stock Market</option>
-            <option value="Crypto">Cryptocurrency</option>
-            <option value="Cash">Cash / Savings</option>
-            <option value="Other">Other Assets</option>
+            <option value="Stock" {% if p_type == 'Stock' or not p_type %}selected{% endif %}>Stock Market</option>
+            <option value="Crypto" {% if p_type == 'Crypto' %}selected{% endif %}>Cryptocurrency</option>
+            <option value="Cash" {% if p_type == 'Cash' %}selected{% endif %}>Cash / Savings</option>
+            <option value="Other" {% if p_type == 'Other' %}selected{% endif %}>Other Assets</option>
           </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-vault-400 uppercase tracking-widest mb-2 ml-1">Initial Capital</label>
+          <input type="number" step="0.01" min="0" name="capital" placeholder="0.00" required
+                 value="{{ capital or '' }}"
+                 class="w-full bg-vault-850/50 border-vault-700">
         </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-vault-400 uppercase tracking-widest mb-2 ml-1">Initial Capital</label>
-            <input type="number" step="0.01" name="capital" placeholder="0.00" required
-                   class="w-full bg-vault-850/50 border-vault-700">
+            <label class="block text-xs font-semibold text-vault-400 uppercase tracking-widest mb-2 ml-1">Current P/L Type</label>
+            <select name="pl_type" class="w-full bg-vault-850 border-vault-700" required>
+              <option value="Profit" {% if pl_type == 'Profit' or not pl_type %}selected{% endif %}>Profit (+)</option>
+              <option value="Loss" {% if pl_type == 'Loss' %}selected{% endif %}>Loss (-)</option>
+            </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-vault-400 uppercase tracking-widest mb-2 ml-1">Current P/L</label>
-            <input type="number" step="0.01" name="pl" placeholder="0.00" required
+            <label class="block text-xs font-semibold text-vault-400 uppercase tracking-widest mb-2 ml-1">Current P/L Value</label>
+            <input type="number" step="0.01" min="0" name="pl" placeholder="0.00" required
+                   value="{{ pl or '' }}"
                    class="w-full bg-vault-850/50 border-vault-700">
           </div>
         </div>
