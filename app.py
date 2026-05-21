@@ -230,6 +230,99 @@ def add_transaction(id):
     flash("Transaction recorded!", "success")
     return redirect(url_for('view_portfolio', id=id))
 
+@app.route('/transaction/<int:tx_id>/edit', methods=['POST'])
+@login_required
+def edit_transaction(tx_id):
+    new_amount = float(request.form.get('amount', 0))
+    new_type   = request.form.get('type')
+    new_notes  = request.form.get('notes')
+    new_date   = request.form.get('date', datetime.now().strftime('%Y-%m-%d'))
+
+    cur = mysql.connection.cursor()
+
+    # Fetch the original transaction to reverse its effect on the portfolio
+    cur.execute("SELECT portfolio_id, amount, type FROM transactions WHERE id = %s", [tx_id])
+    old_tx = cur.fetchone()
+
+    if not old_tx:
+        flash("Transaction not found.", "error")
+        cur.close()
+        return redirect(url_for('dashboard'))
+
+    portfolio_id = old_tx[0]
+    old_amount   = float(old_tx[1])
+    old_type     = old_tx[2]
+
+    # --- Reverse old transaction effect ---
+    if old_type == 'Capital Add':
+        cur.execute("UPDATE portfolios SET initial_capital = initial_capital - %s WHERE id = %s", (old_amount, portfolio_id))
+    elif old_type == 'Capital Withdraw':
+        cur.execute("UPDATE portfolios SET initial_capital = initial_capital + %s WHERE id = %s", (old_amount, portfolio_id))
+    elif old_type == 'Profit':
+        cur.execute("UPDATE portfolios SET current_pl = current_pl - %s WHERE id = %s", (old_amount, portfolio_id))
+    elif old_type == 'Loss':
+        cur.execute("UPDATE portfolios SET current_pl = current_pl + %s WHERE id = %s", (old_amount, portfolio_id))
+
+    # --- Apply new transaction effect ---
+    if new_type == 'Capital Add':
+        cur.execute("UPDATE portfolios SET initial_capital = initial_capital + %s WHERE id = %s", (new_amount, portfolio_id))
+    elif new_type == 'Capital Withdraw':
+        cur.execute("UPDATE portfolios SET initial_capital = initial_capital - %s WHERE id = %s", (new_amount, portfolio_id))
+    elif new_type == 'Profit':
+        cur.execute("UPDATE portfolios SET current_pl = current_pl + %s WHERE id = %s", (new_amount, portfolio_id))
+    elif new_type == 'Loss':
+        cur.execute("UPDATE portfolios SET current_pl = current_pl - %s WHERE id = %s", (new_amount, portfolio_id))
+
+    # --- Update the transaction record ---
+    cur.execute(
+        "UPDATE transactions SET amount = %s, type = %s, notes = %s, tx_date = %s WHERE id = %s",
+        (new_amount, new_type, new_notes, new_date, tx_id)
+    )
+
+    mysql.connection.commit()
+    cur.close()
+
+    flash("Transaction updated successfully!", "success")
+    return redirect(url_for('view_portfolio', id=portfolio_id))
+
+
+@app.route('/transaction/<int:tx_id>/delete/<int:portfolio_id>', methods=['POST'])
+@login_required
+def delete_transaction(tx_id, portfolio_id):
+    cur = mysql.connection.cursor()
+
+    # Fetch the transaction to reverse its portfolio impact
+    cur.execute("SELECT amount, type FROM transactions WHERE id = %s", [tx_id])
+    tx = cur.fetchone()
+
+    if not tx:
+        flash("Transaction not found.", "error")
+        cur.close()
+        return redirect(url_for('view_portfolio', id=portfolio_id))
+
+    amount  = float(tx[0])
+    tx_type = tx[1]
+
+    # --- Reverse the transaction's effect on portfolio ---
+    if tx_type == 'Capital Add':
+        cur.execute("UPDATE portfolios SET initial_capital = initial_capital - %s WHERE id = %s", (amount, portfolio_id))
+    elif tx_type == 'Capital Withdraw':
+        cur.execute("UPDATE portfolios SET initial_capital = initial_capital + %s WHERE id = %s", (amount, portfolio_id))
+    elif tx_type == 'Profit':
+        cur.execute("UPDATE portfolios SET current_pl = current_pl - %s WHERE id = %s", (amount, portfolio_id))
+    elif tx_type == 'Loss':
+        cur.execute("UPDATE portfolios SET current_pl = current_pl + %s WHERE id = %s", (amount, portfolio_id))
+
+    # --- Delete the transaction ---
+    cur.execute("DELETE FROM transactions WHERE id = %s", [tx_id])
+
+    mysql.connection.commit()
+    cur.close()
+
+    flash("Transaction deleted and portfolio balance updated.", "info")
+    return redirect(url_for('view_portfolio', id=portfolio_id))
+
+
 @app.route('/portfolio/delete/<int:id>')
 @login_required
 def delete_portfolio(id):

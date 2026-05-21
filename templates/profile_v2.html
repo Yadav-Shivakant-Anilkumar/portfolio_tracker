@@ -2,13 +2,21 @@
 
 {% block content %}
 <div class="flex min-h-screen bg-vault-950">
+    <!-- Sidebar Backdrop Overlay -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-25 hidden lg:hidden"></div>
+
     <!-- Sidebar -->
-    <aside class="w-64 bg-vault-900 border-r border-vault-700 flex flex-col fixed h-full z-30">
-        <div class="p-6 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber to-amber-dark flex items-center justify-center">
-                <i class="fa-solid fa-vault text-vault-950 text-sm"></i>
+    <aside class="w-64 bg-vault-900 border-r border-vault-700 flex flex-col fixed h-full z-30 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div class="p-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber to-amber-dark flex items-center justify-center">
+                    <i class="fa-solid fa-vault text-vault-950 text-sm"></i>
+                </div>
+                <span class="font-display text-lg font-bold tracking-tight">Vaultfolio</span>
             </div>
-            <span class="font-display text-lg font-bold tracking-tight">Vaultfolio</span>
+            <button id="close-sidebar-btn" class="lg:hidden text-vault-400 hover:text-white p-2 rounded-xl hover:bg-vault-800 transition-colors" title="Close Menu">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
         </div>
         <nav class="flex-1 px-4 py-2 space-y-1">
             <a href="{{ url_for('dashboard') }}" class="nav-item">
@@ -28,13 +36,28 @@
         </div>
     </aside>
 
-    <main class="flex-1 ml-64 p-8">
-        <header class="mb-10">
+    <main class="flex-1 lg:ml-64 p-4 md:p-8 w-full overflow-x-hidden">
+        <!-- Mobile Header Bar -->
+        <div class="flex items-center justify-between p-4 bg-vault-900 border border-vault-800 lg:hidden mb-6 rounded-2xl">
+            <div class="flex items-center gap-3">
+                <button id="mobile-menu-btn" class="text-vault-400 hover:text-white p-2 rounded-xl hover:bg-vault-800 transition-colors" title="Open Menu">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <span class="font-display font-bold tracking-tight text-lg">Vaultfolio</span>
+            </div>
+            {% if session.get('user_name') %}
+            <div class="w-8 h-8 rounded-lg bg-amber/10 flex items-center justify-center text-amber font-display font-bold text-xs">
+                {{ session['user_name'][0]|upper }}
+            </div>
+            {% endif %}
+        </div>
+
+        <header class="mb-6 md:mb-10">
             <h1 class="font-display text-3xl font-bold tracking-tight mb-2">Profile Settings</h1>
             <p class="text-vault-400">Manage your account and security.</p>
         </header>
 
-        <div class="grid grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             <!-- Basic Info -->
             <div class="glass-card rounded-3xl p-8">
                 <h3 class="font-display font-bold text-xl mb-6">Personal Information</h3>

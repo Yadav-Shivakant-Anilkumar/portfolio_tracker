@@ -2,13 +2,21 @@
 
 {% block content %}
 <div class="flex min-h-screen bg-vault-950">
+    <!-- Sidebar Backdrop Overlay -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-25 hidden lg:hidden"></div>
+
     <!-- Sidebar -->
-    <aside class="w-64 bg-vault-900 border-r border-vault-700 flex flex-col fixed h-full z-30">
-        <div class="p-6 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber to-amber-dark flex items-center justify-center">
-                <i class="fa-solid fa-vault text-vault-950 text-sm"></i>
+    <aside class="w-64 bg-vault-900 border-r border-vault-700 flex flex-col fixed h-full z-30 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div class="p-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber to-amber-dark flex items-center justify-center">
+                    <i class="fa-solid fa-vault text-vault-950 text-sm"></i>
+                </div>
+                <span class="font-display text-lg font-bold tracking-tight">Vaultfolio</span>
             </div>
-            <span class="font-display text-lg font-bold tracking-tight">Vaultfolio</span>
+            <button id="close-sidebar-btn" class="lg:hidden text-vault-400 hover:text-white p-2 rounded-xl hover:bg-vault-800 transition-colors" title="Close Menu">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
         </div>
 
         <nav class="flex-1 px-4 py-2 space-y-1">
@@ -31,8 +39,23 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 ml-64 p-8">
-        <header class="flex justify-between items-end mb-10">
+    <main class="flex-1 lg:ml-64 p-4 md:p-8 w-full overflow-x-hidden">
+        <!-- Mobile Header Bar -->
+        <div class="flex items-center justify-between p-4 bg-vault-900 border border-vault-800 lg:hidden mb-6 rounded-2xl">
+            <div class="flex items-center gap-3">
+                <button id="mobile-menu-btn" class="text-vault-400 hover:text-white p-2 rounded-xl hover:bg-vault-800 transition-colors" title="Open Menu">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <span class="font-display font-bold tracking-tight text-lg">Vaultfolio</span>
+            </div>
+            {% if session.get('user_name') %}
+            <div class="w-8 h-8 rounded-lg bg-amber/10 flex items-center justify-center text-amber font-display font-bold text-xs">
+                {{ session['user_name'][0]|upper }}
+            </div>
+            {% endif %}
+        </div>
+
+        <header class="flex flex-col sm:flex-row justify-between sm:items-end gap-4 mb-6 md:mb-10">
             <div>
                 <h1 class="font-display text-3xl font-bold tracking-tight mb-2">Portfolio Overview</h1>
                 <p class="text-vault-400">Welcome back, {{ session['user_name'] }}.</p>
@@ -46,13 +69,34 @@
         </header>
 
         <!-- Stats Grid -->
-        <div class="grid grid-cols-3 gap-6 mb-10">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-10">
+            <!-- Net Capital Card -->
             <div class="glass-card rounded-2xl p-6 border-l-4 border-amber">
-                <p class="text-vault-400 text-xs uppercase tracking-wider mb-2 font-semibold">Net Capital</p>
+                <p class="text-vault-400 text-xs uppercase tracking-wider mb-2 font-semibold flex items-center gap-1.5">
+                    <span>Net Capital</span>
+                    <span class="relative group cursor-pointer inline-flex items-center">
+                        <i class="fa-regular fa-circle-question text-vault-500 hover:text-amber transition-colors text-[11px]"></i>
+                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2.5 bg-vault-900 border border-vault-700 text-vault-200 text-[10px] font-normal normal-case rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 text-center z-50 pointer-events-none leading-relaxed">
+                            The total invested capital across all active portfolio trackers.
+                            <span class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-vault-700"></span>
+                        </span>
+                    </span>
+                </p>
                 <p class="text-2xl font-display font-bold">₹{{ "{:,.2f}".format(summary['total_capital']) }}</p>
             </div>
+
+            <!-- Total P&L Card -->
             <div class="glass-card rounded-2xl p-6 border-l-4 {% if summary['total_pl'] >= 0 %}border-gain{% else %}border-loss{% endif %}">
-                <p class="text-vault-400 text-xs uppercase tracking-wider mb-2 font-semibold">Total P&L</p>
+                <p class="text-vault-400 text-xs uppercase tracking-wider mb-2 font-semibold flex items-center gap-1.5">
+                    <span>Total P&L</span>
+                    <span class="relative group cursor-pointer inline-flex items-center">
+                        <i class="fa-regular fa-circle-question text-vault-500 hover:text-amber transition-colors text-[11px]"></i>
+                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2.5 bg-vault-900 border border-vault-700 text-vault-200 text-[10px] font-normal normal-case rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 text-center z-50 pointer-events-none leading-relaxed">
+                            The combined gains or losses generated across all your portfolio trackers.
+                            <span class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-vault-700"></span>
+                        </span>
+                    </span>
+                </p>
                 <div class="flex items-baseline gap-2">
                     <p class="text-2xl font-display font-bold {% if summary['total_pl'] >= 0 %}text-gain{% else %}text-loss{% endif %}">
                         {% if summary['total_pl'] >= 0 %}+{% endif %}₹{{ "{:,.2f}".format(summary['total_pl']) }}
@@ -62,21 +106,27 @@
                     </span>
                 </div>
             </div>
+
+            <!-- Portfolio Count Card -->
             <div class="glass-card rounded-2xl p-6 border-l-4 border-vault-500">
-                <p class="text-vault-400 text-xs uppercase tracking-wider mb-2 font-semibold">Portfolio Count</p>
+                <p class="text-vault-400 text-xs uppercase tracking-wider mb-2 font-semibold flex items-center gap-1.5">
+                    <span>Portfolio Count</span>
+                    <span class="relative group cursor-pointer inline-flex items-center">
+                        <i class="fa-regular fa-circle-question text-vault-500 hover:text-amber transition-colors text-[11px]"></i>
+                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2.5 bg-vault-900 border border-vault-700 text-vault-200 text-[10px] font-normal normal-case rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 text-center z-50 pointer-events-none leading-relaxed">
+                            The total number of individual portfolio trackers you have created.
+                            <span class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-vault-700"></span>
+                        </span>
+                    </span>
+                </p>
                 <p class="text-2xl font-display font-bold">{{ portfolios|length }}</p>
             </div>
         </div>
 
         <!-- Portfolios Grid -->
-        <div class="grid grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {% for p in portfolios %}
             <div class="glass-card rounded-3xl p-6 hover:border-amber/30 transition-all group relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <a href="{{ url_for('delete_portfolio', id=p.id) }}" class="text-vault-600 hover:text-loss" onclick="return confirm('Delete this portfolio?')">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </a>
-                </div>
                 <div class="flex justify-between items-start mb-6">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-amber/10 flex items-center justify-center text-amber text-xl">
@@ -102,9 +152,17 @@
                     <div class="text-xs text-vault-400">
                         Capital: <span class="text-vault-200">₹{{ "{:,.2f}".format(p.capital) }}</span>
                     </div>
-                    <a href="{{ url_for('view_portfolio', id=p.id) }}" class="text-xs font-bold text-amber hover:underline flex items-center gap-1">
-                        Manage <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                    </a>
+                    <div class="flex items-center gap-3">
+                        <button class="w-8 h-8 rounded-xl bg-loss/10 hover:bg-loss text-loss hover:text-white flex items-center justify-center transition-all duration-300 btn-delete-portfolio"
+                                data-url="{{ url_for('delete_portfolio', id=p.id) }}"
+                                data-name="{{ p.name }}"
+                                title="Delete Portfolio">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                        <a href="{{ url_for('view_portfolio', id=p.id) }}" class="text-xs font-bold text-amber hover:underline flex items-center gap-1">
+                            Manage <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
             {% endfor %}
@@ -118,4 +176,41 @@
         </div>
     </main>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Portfolio Delete Confirmation
+    const deleteButtons = document.querySelectorAll('.btn-delete-portfolio');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const deleteUrl = this.getAttribute('data-url');
+            const portfolioName = this.getAttribute('data-name');
+            
+            Swal.fire({
+                title: 'Delete Portfolio?',
+                html: `Are you sure you want to delete <span class="text-amber font-bold">${portfolioName}</span>?<br><span class="text-xs text-vault-400 mt-2 block">This action will delete all assets and transactions under this portfolio and cannot be undone.</span>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#3a3a4f',
+                confirmButtonText: 'Yes, delete it',
+                cancelButtonText: 'Cancel',
+                background: '#16161b',
+                color: '#e8e8f0',
+                iconColor: '#EF4444',
+                customClass: {
+                    popup: 'rounded-3xl border border-vault-700 glass-card'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = deleteUrl;
+                }
+            });
+        });
+    });
+});
+</script>
 {% endblock %}
