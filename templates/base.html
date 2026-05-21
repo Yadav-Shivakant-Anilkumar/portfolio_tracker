@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <script>
         tailwind.config = {
@@ -41,7 +43,8 @@
         .nav-item.active { background: #E8A924; color: #0b0b0e; font-weight: 600; }
         .btn-primary { background: #E8A924; color: #0b0b0e; @apply font-semibold py-3 px-6 rounded-xl hover:bg-amber-dark transition-all shadow-lg shadow-amber/10; }
         .btn-ghost { background: rgba(255, 255, 255, 0.05); @apply py-3 px-6 rounded-xl hover:bg-white/10 transition-all border border-white/5; }
-        input, select, textarea { background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; @apply rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber/50 outline-none transition-all; }
+        input, select, textarea { background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; color: #e8e8f0 !important; @apply rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber/50 outline-none transition-all; }
+        option { background-color: #16161b; color: #e8e8f0; }
         .badge { @apply px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider; }
         .badge-gain { background: rgba(34, 197, 94, 0.1); color: #22C55E; }
         .badge-loss { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
@@ -66,5 +69,39 @@
     {% block content %}{% endblock %}
 
     {% block scripts %}{% endblock %}
+
+    <!-- Mobile Sidebar Controller -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+            const sidebar = document.querySelector('aside');
+            const backdrop = document.getElementById('sidebar-backdrop');
+
+            if (mobileMenuBtn && sidebar) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    sidebar.classList.remove('-translate-x-full');
+                    if (backdrop) backdrop.classList.remove('hidden');
+                });
+            }
+
+            function closeSidebar() {
+                if (sidebar) {
+                    sidebar.classList.add('-translate-x-full');
+                }
+                if (backdrop) {
+                    backdrop.classList.add('hidden');
+                }
+            }
+
+            if (closeSidebarBtn) {
+                closeSidebarBtn.addEventListener('click', closeSidebar);
+            }
+
+            if (backdrop) {
+                backdrop.addEventListener('click', closeSidebar);
+            }
+        });
+    </script>
 </body>
 </html>

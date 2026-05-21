@@ -8,7 +8,12 @@
       <p class="text-vault-400">Add a tracker for your assets.</p>
     </div>
 
-    <div class="glass-card rounded-3xl p-8 shadow-2xl">
+    <div class="glass-card rounded-3xl p-8 shadow-2xl relative">
+      <!-- Close Button -->
+      <a href="{{ url_for('dashboard') }}" class="absolute top-6 right-6 text-vault-500 hover:text-vault-200 hover:bg-vault-800/50 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300" title="Close and return to dashboard">
+        <i class="fa-solid fa-xmark"></i>
+      </a>
+
       <form action="{{ url_for('create_portfolio') }}" method="POST" class="space-y-6">
         <div>
           <label class="block text-xs font-semibold text-vault-400 uppercase tracking-widest mb-2 ml-1">Portfolio Name</label>
@@ -39,10 +44,15 @@
           </div>
         </div>
 
-        <button type="submit" class="btn-primary w-full flex items-center justify-center gap-2">
-          <span>Create Portfolio</span>
-          <i class="fa-solid fa-check text-xs"></i>
-        </button>
+        <div class="flex items-center gap-4 pt-2">
+          <a href="{{ url_for('dashboard') }}" class="btn-ghost flex-1 text-center font-semibold">
+            Cancel
+          </a>
+          <button type="submit" class="btn-primary flex-1 flex items-center justify-center gap-2">
+            <span>Create</span>
+            <i class="fa-solid fa-check text-xs"></i>
+          </button>
+        </div>
       </form>
     </div>
   </div>
