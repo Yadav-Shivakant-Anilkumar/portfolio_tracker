@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex min-h-screen bg-vault-950">
+    <!-- Sidebar Backdrop Overlay -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-25 hidden lg:hidden"></div>
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-vault-900 border-r border-vault-700 flex flex-col fixed h-full z-30 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div class="p-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber to-amber-dark flex items-center justify-center">
+                    <i class="fa-solid fa-vault text-vault-950 text-sm"></i>
+                </div>
+                <span class="font-display text-lg font-bold tracking-tight">Vaultfolio Admin</span>
+            </div>
+            <button id="close-sidebar-btn" class="lg:hidden text-vault-400 hover:text-white p-2 rounded-xl hover:bg-vault-800 transition-colors" title="Close Menu">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 px-4 py-2 space-y-1">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <i class="fa-solid fa-arrow-left w-5 text-center"></i> User Dashboard
+            </a>
+            <hr class="border-vault-800 my-2">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-item active">
+                <i class="fa-solid fa-users w-5 text-center"></i> Users List
+            </a>
+            <a href="{{ url_for('admin_portfolios') }}" class="nav-item">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i> Portfolios
+            </a>
+            <a href="{{ url_for('admin_transactions') }}" class="nav-item">
+                <i class="fa-solid fa-receipt w-5 text-center"></i> Audit Log
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-vault-700">
+            <a href="{{ url_for('logout') }}" class="flex items-center gap-3 px-4 py-3 text-vault-500 hover:text-loss transition-colors">
+                <i class="fa-solid fa-right-from-bracket w-5 text-center"></i> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 lg:ml-64 p-4 md:p-8 w-full overflow-x-hidden">
+        <!-- Mobile Header Bar -->
+        <div class="flex items-center justify-between p-4 bg-vault-900 border border-vault-800 lg:hidden mb-6 rounded-2xl">
+            <div class="flex items-center gap-3">
+                <button id="mobile-menu-btn" class="text-vault-400 hover:text-white p-2 rounded-xl hover:bg-vault-800 transition-colors" title="Open Menu">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <span class="font-display font-bold tracking-tight text-lg">Vaultfolio Admin</span>
+            </div>
+        </div>
+
+        <!-- Back link and Title -->
+        <div class="mb-6 md:mb-10">
+            <a href="{{ url_for('admin_dashboard') }}" class="inline-flex items-center gap-2 text-vault-400 hover:text-amber mb-4 transition-colors text-sm font-medium">
+                <i class="fa-solid fa-chevron-left text-xs"></i> Back to Users List
+            </a>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-3 mb-2 flex-wrap">
+                        <h1 class="font-display text-3xl font-bold tracking-tight">{{ user.full_name }}</h1>
+                        {% if user.is_admin %}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber/15 text-amber border border-amber/20">Admin</span>
+                        {% else %}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-vault-800 text-vault-400 border border-vault-700">User</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-vault-400 text-sm">Account details, portfolios, and transaction audits for #{{ user.id }}.</p>
+                </div>
+                
+                {% if user.id != session['user_id'] %}
+                <div>
+                    <button class="inline-flex items-center gap-2 bg-loss/10 hover:bg-loss/20 text-loss border border-loss/20 font-semibold py-3 px-5 rounded-xl transition-all btn-delete-user" data-url="{{ url_for('admin_delete_user', user_id=user.id) }}" data-name="{{ user.full_name }}" data-email="{{ user.email }}">
+                        <i class="fa-solid fa-trash-can"></i> Delete User Account
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            <!-- Left Column: User configuration panels -->
+            <div class="lg:col-span-1 space-y-6 md:space-y-8">
+                <!-- Profile Settings Card -->
+                <div class="glass-card rounded-3xl p-6 md:p-8">
+                    <h3 class="font-display font-bold text-lg mb-6 flex items-center gap-2">
+                        <i class="fa-solid fa-user-gear text-amber"></i> Profile Settings
+                    </h3>
+                    
+                    <form action="{{ url_for('admin_user_detail', user_id=user.id) }}" method="POST" class="space-y-4">
+                        <input type="hidden" name="action" value="update_profile">
+                        
+                        <div class="flex flex-col">
+                            <label for="full_name" class="text-xs text-vault-400 uppercase tracking-wider mb-2 font-semibold">Full Name</label>
+                            <input type="text" id="full_name" name="full_name" value="{{ user.full_name }}" required>
+                        </div>
+                        
+                        <div class="flex flex-col">
+                            <label for="email" class="text-xs text-vault-400 uppercase tracking-wider mb-2 font-semibold">Email Address</label>
+                            <input type="email" id="email" value="{{ user.email }}" disabled class="opacity-60 cursor-not-allowed" title="Email cannot be modified">
+                            <span class="text-[10px] text-vault-500 mt-1">Email matches database unique identifier and cannot be modified.</span>
+                        </div>
+                        
+                        <div class="flex flex-col">
+                            <label for="phone" class="text-xs text-vault-400 uppercase tracking-wider mb-2 font-semibold">Phone Number</label>
+                            <input type="text" id="phone" name="phone" value="{{ user.phone }}" placeholder="Not set">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="currency" class="text-xs text-vault-400 uppercase tracking-wider mb-2 font-semibold">Base Currency</label>
+                            <select id="currency" name="currency" required>
+                                <option value="INR" {% if user.currency == 'INR' %}selected{% endif %}>INR (₹)</option>
+                                <option value="USD" {% if user.currency == 'USD' %}selected{% endif %}>USD ($)</option>
+                                <option value="EUR" {% if user.currency == 'EUR' %}selected{% endif %}>EUR (€)</option>
+                                <option value="GBP" {% if user.currency == 'GBP' %}selected{% endif %}>GBP (£)</option>
+                                <option value="JPY" {% if user.currency == 'JPY' %}selected{% endif %}>JPY (¥)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="is_admin" class="text-xs text-vault-400 uppercase tracking-wider mb-2 font-semibold">User Role</label>
+                            <select id="is_admin" name="is_admin" required>
+                                <option value="0" {% if user.is_admin == 0 %}selected{% endif %}>Standard User</option>
+                                <option value="1" {% if user.is_admin == 1 %}selected{% endif %}>Administrator</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-primary w-full mt-4 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-save"></i> Save Changes
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Password settings card -->
+                <div class="glass-card rounded-3xl p-6 md:p-8">
+                    <h3 class="font-display font-bold text-lg mb-6 flex items-center gap-2">
+                        <i class="fa-solid fa-key text-amber"></i> Reset Password
+                    </h3>
+                    
+                    <form action="{{ url_for('admin_user_detail', user_id=user.id) }}" method="POST" class="space-y-4">
+                        <input type="hidden" name="action" value="change_password">
+                        
+                        <div class="flex flex-col">
+                            <label for="new_password" class="text-xs text-vault-400 uppercase tracking-wider mb-2 font-semibold">New Password</label>
+                            <input type="text" id="new_password" name="new_password" placeholder="Enter new password" required>
+                        </div>
+                        
+                        <button type="submit" class="btn-ghost w-full mt-2 text-amber hover:text-amber-dark flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-rotate"></i> Update Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Column: User's Portfolios and Transaction ledger -->
+            <div class="lg:col-span-2 space-y-6 md:space-y-8">
+                <!-- User's Portfolios Card -->
+                <div class="glass-card rounded-3xl p-6 md:p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-display font-bold text-lg flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-amber"></i> User's Portfolios
+                        </h3>
+                        <span class="text-xs text-vault-500 uppercase tracking-widest">{{ portfolios|length }} portfolios</span>
+                    </div>
+
+                    {% if portfolios %}
+                    <div class="overflow-x-auto -mx-6 md:-mx-8">
+                        <table class="w-full text-left text-sm min-w-[500px]">
+                            <thead>
+                                <tr class="text-vault-400 border-b border-vault-700">
+                                    <th class="px-6 md:px-8 py-3 font-medium uppercase tracking-wider text-xs">Portfolio Name</th>
+                                    <th class="px-6 py-3 font-medium uppercase tracking-wider text-xs">Asset Type</th>
+                                    <th class="px-6 py-3 font-medium uppercase tracking-wider text-xs text-right">Capital</th>
+                                    <th class="px-6 py-3 font-medium uppercase tracking-wider text-xs text-right">P&L</th>
+                                    <th class="px-6 md:px-8 py-3 font-medium uppercase tracking-wider text-xs text-right">Net Value</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-vault-800">
+                                {% for p in portfolios %}
+                                <tr class="hover:bg-vault-850/40 transition-colors">
+                                    <td class="px-6 md:px-8 py-4 font-bold text-vault-100">{{ p.name }}</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider 
+                                            {% if p.type == 'Stock' %} bg-blue-500/10 text-blue-400 border border-blue-500/20
+                                            {% elif p.type == 'Crypto' %} bg-purple-500/10 text-purple-400 border border-purple-500/20
+                                            {% elif p.type == 'Cash' %} bg-emerald-500/10 text-emerald-400 border border-emerald-500/20
+                                            {% else %} bg-slate-500/10 text-slate-400 border border-slate-500/20 {% endif %}">
+                                            {{ p.type }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right font-display text-vault-400">
+                                        ₹{{ "{:,.2f}".format(p.capital) }}
+                                    </td>
+                                    <td class="px-6 py-4 text-right font-display font-medium {% if p.pl >= 0 %}text-gain{% else %}text-loss{% endif %}">
+                                        ₹{{ "{:,.2f}".format(p.pl) }}
+                                    </td>
+                                    <td class="px-6 md:px-8 py-4 text-right font-display font-bold text-vault-100">
+                                        ₹{{ "{:,.2f}".format(p.total_value) }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <i class="fa-solid fa-folder-open text-vault-600 text-3xl mb-3"></i>
+                        <p class="text-vault-400 text-sm">This user hasn't created any portfolios yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Recent Transactions Audit Card -->
+                <div class="glass-card rounded-3xl p-6 md:p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-display font-bold text-lg flex items-center gap-2">
+                            <i class="fa-solid fa-receipt text-amber"></i> Recent Transactions Audit
+                        </h3>
+                        <span class="text-xs text-vault-500 uppercase tracking-widest">Audit Trail</span>
+                    </div>
+
+                    {% if transactions %}
+                    <div class="overflow-x-auto -mx-6 md:-mx-8">
+                        <table class="w-full text-left text-sm min-w-[500px]">
+                            <thead>
+                                <tr class="text-vault-400 border-b border-vault-700">
+                                    <th class="px-6 md:px-8 py-3 font-medium uppercase tracking-wider text-xs">Date</th>
+                                    <th class="px-6 py-3 font-medium uppercase tracking-wider text-xs">Portfolio</th>
+                                    <th class="px-6 py-3 font-medium uppercase tracking-wider text-xs">Type</th>
+                                    <th class="px-6 py-3 font-medium uppercase tracking-wider text-xs text-right">Amount</th>
+                                    <th class="px-6 md:px-8 py-3 font-medium uppercase tracking-wider text-xs">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-vault-800">
+                                {% for tx in transactions %}
+                                <tr class="hover:bg-vault-850/40 transition-colors">
+                                    <td class="px-6 md:px-8 py-4 text-vault-400 text-xs">{{ tx.date }}</td>
+                                    <td class="px-6 py-4 font-medium text-vault-200">{{ tx.portfolio_name }}</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider
+                                            {% if tx.type == 'Capital Add' %} bg-blue-500/10 text-blue-400 border border-blue-500/20
+                                            {% elif tx.type == 'Capital Withdraw' %} bg-orange-500/10 text-orange-400 border border-orange-500/20
+                                            {% elif tx.type == 'Profit' %} bg-gain/10 text-gain border border-gain/20
+                                            {% elif tx.type == 'Loss' %} bg-loss/10 text-loss border border-loss/20 {% endif %}">
+                                            {{ tx.type }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right font-display font-bold {% if tx.type in ['Capital Add', 'Profit'] %}text-gain{% else %}text-loss{% endif %}">
+                                        ₹{{ "{:,.2f}".format(tx.amount) }}
+                                    </td>
+                                    <td class="px-6 md:px-8 py-4 text-vault-400 text-xs max-w-xs truncate" title="{{ tx.notes }}">{{ tx.notes }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <i class="fa-solid fa-receipt text-vault-600 text-3xl mb-3"></i>
+                        <p class="text-vault-400 text-sm">No transaction audit records found for this user.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteBtn = document.querySelector('.btn-delete-user');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const deleteUrl = this.getAttribute('data-url');
+            const userName = this.getAttribute('data-name');
+            const userEmail = this.getAttribute('data-email');
+            
+            Swal.fire({
+                title: 'Delete User?',
+                html: `Are you sure you want to permanently delete user <span class="text-amber font-bold">${userName}</span> (${userEmail})?<br><span class="text-xs text-vault-400 mt-2 block">This will permanently delete this user, all their portfolios, transactions, and settings. This action is irreversible.</span>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#3a3a4f',
+                confirmButtonText: 'Delete Account',
+                cancelButtonText: 'Cancel',
+                background: '#16161b',
+                color: '#e8e8f0',
+                iconColor: '#EF4444',
+                customClass: {
+                    popup: 'rounded-3xl border border-vault-700 glass-card'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = deleteUrl;
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

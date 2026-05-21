@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     phone          VARCHAR(20)  DEFAULT NULL,
     password_text  VARCHAR(255) NOT NULL, -- User requested 'no hash', using text for now (NOT RECOMMENDED)
     base_currency  VARCHAR(10)  NOT NULL DEFAULT 'INR',
+    is_admin       TINYINT(1)   NOT NULL DEFAULT 0,
     created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -42,3 +43,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE
 );
+
+-- Seed default admin user (password: admin@059)
+INSERT IGNORE INTO users (full_name, email, phone, password_text, base_currency, is_admin)
+VALUES ('System Admin', 'admin@vaultfolio.com', '9999999999', 'admin@059', 'INR', 1);
+

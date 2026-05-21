@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex min-h-screen bg-vault-950">
+    <!-- Sidebar Backdrop Overlay -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-25 hidden lg:hidden"></div>
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-vault-900 border-r border-vault-700 flex flex-col fixed h-full z-30 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div class="p-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber to-amber-dark flex items-center justify-center">
+                    <i class="fa-solid fa-vault text-vault-950 text-sm"></i>
+                </div>
+                <span class="font-display text-lg font-bold tracking-tight">Vaultfolio Admin</span>
+            </div>
+            <button id="close-sidebar-btn" class="lg:hidden text-vault-400 hover:text-white p-2 rounded-xl hover:bg-vault-800 transition-colors" title="Close Menu">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 px-4 py-2 space-y-1">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <i class="fa-solid fa-arrow-left w-5 text-center"></i> User Dashboard
+            </a>
+            <hr class="border-vault-800 my-2">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-item active">
+                <i class="fa-solid fa-users w-5 text-center"></i> Users List
+            </a>
+            <a href="{{ url_for('admin_portfolios') }}" class="nav-item">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i> Portfolios
+            </a>
+            <a href="{{ url_for('admin_transactions') }}" class="nav-item">
+                <i class="fa-solid fa-receipt w-5 text-center"></i> Audit Log
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-vault-700">
+            <a href="{{ url_for('logout') }}" class="flex items-center gap-3 px-4 py-3 text-vault-500 hover:text-loss transition-colors">
+                <i class="fa-solid fa-right-from-bracket w-5 text-center"></i> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 lg:ml-64 p-4 md:p-8 w-full overflow-x-hidden">
+        <!-- Mobile Header Bar -->
+        <div class="flex items-center justify-between p-4 bg-vault-900 border border-vault-800 lg:hidden mb-6 rounded-2xl">
+            <div class="flex items-center gap-3">
+                <button id="mobile-menu-btn" class="text-vault-400 hover:text-white p-2 rounded-xl hover:bg-vault-800 transition-colors" title="Open Menu">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <span class="font-display font-bold tracking-tight text-lg">Vaultfolio Admin</span>
+            </div>
+        </div>
+
+        <header class="flex flex-col sm:flex-row justify-between sm:items-end gap-4 mb-6 md:mb-10">
+            <div>
+                <h1 class="font-display text-3xl font-bold tracking-tight mb-2">Admin Dashboard</h1>
+                <p class="text-vault-400">Platform metrics and user configuration panel.</p>
+            </div>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-10">
+            <div class="glass-card rounded-2xl p-6 border-l-4 border-amber">
+                <p class="text-vault-400 text-xs uppercase tracking-wider mb-2 font-semibold">Total Users</p>
+                <p class="text-2xl font-display font-bold">{{ summary['total_users'] }}</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6 border-l-4 border-vault-300">
+                <p class="text-vault-400 text-xs uppercase tracking-wider mb-2 font-semibold">Total Portfolios</p>
+                <p class="text-2xl font-display font-bold">{{ summary['total_portfolios'] }}</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6 border-l-4 border-gain">
+                <p class="text-vault-400 text-xs uppercase tracking-wider mb-2 font-semibold">Total Capital</p>
+                <p class="text-2xl font-display font-bold">₹{{ "{:,.2f}".format(summary['total_capital']) }}</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6 border-l-4 border-vault-500">
+                <p class="text-vault-400 text-xs uppercase tracking-wider mb-2 font-semibold">Platform Valuation</p>
+                <p class="text-2xl font-display font-bold">₹{{ "{:,.2f}".format(summary['total_value']) }}</p>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="glass-card rounded-3xl overflow-hidden shadow-2xl">
+            <div class="px-8 py-6 border-b border-vault-700 bg-vault-900/50 flex justify-between items-center">
+                <h3 class="font-display font-bold">Registered Users</h3>
+                <span class="text-xs text-vault-500 uppercase tracking-widest">{{ users|length }} users</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="text-vault-400 border-b border-vault-700">
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">ID</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">User</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Role</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Created At</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">Trackers</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Net Value</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-vault-800">
+                        {% for u in users %}
+                        <tr class="hover:bg-vault-850/40 transition-colors">
+                            <td class="px-6 py-4 text-vault-400">#{{ u.id }}</td>
+                            <td class="px-6 py-4">
+                                <div class="font-bold text-vault-100">{{ u.full_name }}</div>
+                                <div class="text-xs text-vault-500">{{ u.email }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                {% if u.is_admin %}
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber/15 text-amber border border-amber/20">Admin</span>
+                                {% else %}
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-vault-800 text-vault-400 border border-vault-700">User</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-vault-400 text-xs">{{ u.created_at }}</td>
+                            <td class="px-6 py-4 text-center font-display font-medium">{{ u.portfolio_count }}</td>
+                            <td class="px-6 py-4 text-right font-display font-bold {% if u.pl >= 0 %}text-gain{% else %}text-loss{% endif %}">
+                                ₹{{ "{:,.2f}".format(u.total_value) }}
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="{{ url_for('admin_user_detail', user_id=u.id) }}" class="w-8 h-8 rounded-lg bg-amber/10 hover:bg-amber/25 text-amber flex items-center justify-center transition-all" title="Manage User">
+                                        <i class="fa-solid fa-user-gear text-xs"></i>
+                                    </a>
+                                    {% if u.id != session['user_id'] %}
+                                    <button class="w-8 h-8 rounded-lg bg-loss/10 hover:bg-loss/25 text-loss flex items-center justify-center transition-all btn-delete-user" data-url="{{ url_for('admin_delete_user', user_id=u.id) }}" data-name="{{ u.full_name }}" data-email="{{ u.email }}" title="Delete User">
+                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteButtons = document.querySelectorAll('.btn-delete-user');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const deleteUrl = this.getAttribute('data-url');
+            const userName = this.getAttribute('data-name');
+            const userEmail = this.getAttribute('data-email');
+            
+            Swal.fire({
+                title: 'Delete User?',
+                html: `Are you sure you want to permanently delete user <span class="text-amber font-bold">${userName}</span> (${userEmail})?<br><span class="text-xs text-vault-400 mt-2 block">This will permanently delete this user, all their portfolios, transactions, and settings. This action is irreversible.</span>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#3a3a4f',
+                confirmButtonText: 'Delete Account',
+                cancelButtonText: 'Cancel',
+                background: '#16161b',
+                color: '#e8e8f0',
+                iconColor: '#EF4444',
+                customClass: {
+                    popup: 'rounded-3xl border border-vault-700 glass-card'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = deleteUrl;
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,8 +1,4 @@
 import os
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 # ─── MySQL Database ───────────────────────────────────────────
 MYSQL_HOST     = os.getenv('MYSQL_HOST',     'localhost')

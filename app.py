@@ -19,6 +19,45 @@ app.config['MYSQL_DB']       = config.MYSQL_DB
 mysql = MySQL(app)
 
 # -------------------------------------------------------------
+# Startup Database Migrations & Seeding
+# -------------------------------------------------------------
+migration_done = False
+
+@app.before_request
+def run_migrations():
+    global migration_done
+    if not migration_done:
+        try:
+            cur = mysql.connection.cursor()
+            
+            # Check if is_admin column exists
+            cur.execute("SHOW COLUMNS FROM users LIKE 'is_admin'")
+            exists = cur.fetchone()
+            
+            if not exists:
+                print("Migration: Adding 'is_admin' column to 'users' table...")
+                cur.execute("ALTER TABLE users ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0")
+                mysql.connection.commit()
+                print("Migration: 'is_admin' column added successfully.")
+            
+            # Seed default admin user if it doesn't exist
+            cur.execute("SELECT id FROM users WHERE email = 'admin@vaultfolio.com'")
+            admin_exists = cur.fetchone()
+            if not admin_exists:
+                print("Migration: Seeding default admin user...")
+                cur.execute("""
+                    INSERT INTO users (full_name, email, phone, password_text, base_currency, is_admin)
+                    VALUES ('System Admin', 'admin@vaultfolio.com', '9999999999', 'admin@059', 'INR', 1)
+                """)
+                mysql.connection.commit()
+                print("Migration: Default admin user seeded successfully.")
+                
+            cur.close()
+            migration_done = True
+        except Exception as e:
+            print(f"Migration/Seeding warning: {e}")
+
+# -------------------------------------------------------------
 # Decorators & Helpers
 # -------------------------------------------------------------
 def login_required(f):
@@ -27,6 +66,18 @@ def login_required(f):
         if 'user_id' not in session:
             flash('Please log in to continue.', 'error')
             return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to continue.', 'error')
+            return redirect(url_for('login'))
+        if session.get('is_admin') != 1:
+            flash('Access denied. Administrator privileges required.', 'error')
+            return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -40,7 +91,7 @@ def login():
         password = request.form.get('password')
         
         cur = mysql.connection.cursor()
-        cur.execute("SELECT id, full_name, password_text FROM users WHERE email = %s", [email])
+        cur.execute("SELECT id, full_name, password_text, is_admin FROM users WHERE email = %s", [email])
         user = cur.fetchone()
         cur.close()
         
@@ -48,7 +99,10 @@ def login():
         if user and user[2] == password:
             session['user_id'] = user[0]
             session['user_name'] = user[1]
+            session['is_admin'] = user[3]
             flash(f"Welcome back, {user[1]}!", "success")
+            if user[3] == 1:
+                return redirect(url_for('admin_dashboard'))
             return redirect(url_for('dashboard'))
         else:
             flash("Invalid email or password.", "error")
@@ -69,7 +123,7 @@ def register():
             flash("Email already registered.", "error")
             cur.close()
         else:
-            cur.execute("INSERT INTO users (full_name, email, password_text) VALUES (%s, %s, %s)", 
+            cur.execute("INSERT INTO users (full_name, email, password_text, is_admin) VALUES (%s, %s, %s, 0)", 
                         (full_name, email, password))
             mysql.connection.commit()
             user_id = cur.lastrowid
@@ -77,6 +131,7 @@ def register():
             
             session['user_id'] = user_id
             session['user_name'] = full_name
+            session['is_admin'] = 0
             flash("Registration successful! Let's set up your profile.", "success")
             return redirect(url_for('setup_profile'))
             
@@ -380,6 +435,225 @@ def change_password():
         
     cur.close()
     return redirect(url_for('edit_profile'))
+
+# -------------------------------------------------------------
+# Admin Routes
+# -------------------------------------------------------------
+@app.route('/admin')
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    cur = mysql.connection.cursor()
+    
+    # 1. Total users
+    cur.execute("SELECT COUNT(*) FROM users")
+    total_users = cur.fetchone()[0]
+    
+    # 2. Total portfolios
+    cur.execute("SELECT COUNT(*) FROM portfolios")
+    total_portfolios = cur.fetchone()[0]
+    
+    # 3. Total invested capital and current P&L
+    cur.execute("SELECT SUM(initial_capital), SUM(current_pl) FROM portfolios")
+    totals = cur.fetchone()
+    total_capital = float(totals[0] or 0)
+    total_pl = float(totals[1] or 0)
+    total_value = total_capital + total_pl
+    
+    # 4. Fetch all users with portfolio count, capital, and P&L
+    cur.execute("""
+        SELECT u.id, u.full_name, u.email, u.phone, u.base_currency, u.is_admin, u.created_at,
+               COUNT(p.id) as portfolio_count,
+               IFNULL(SUM(p.initial_capital), 0) as total_capital,
+               IFNULL(SUM(p.current_pl), 0) as total_pl
+        FROM users u
+        LEFT JOIN portfolios p ON u.id = p.user_id
+        GROUP BY u.id
+        ORDER BY u.id ASC
+    """)
+    users_raw = cur.fetchall()
+    users = []
+    for row in users_raw:
+        users.append({
+            'id': row[0],
+            'full_name': row[1],
+            'email': row[2],
+            'phone': row[3] or '-',
+            'currency': row[4],
+            'is_admin': row[5],
+            'created_at': row[6].strftime('%Y-%m-%d %H:%M') if row[6] else '-',
+            'portfolio_count': row[7],
+            'capital': float(row[8]),
+            'pl': float(row[9]),
+            'total_value': float(row[8] + row[9])
+        })
+        
+    cur.close()
+    
+    summary = {
+        'total_users': total_users,
+        'total_portfolios': total_portfolios,
+        'total_capital': total_capital,
+        'total_pl': total_pl,
+        'total_value': total_value
+    }
+    
+    return render_template('admin_dashboard.html', summary=summary, users=users)
+
+@app.route('/admin/user/<int:user_id>', methods=['GET', 'POST'])
+@admin_required
+def admin_user_detail(user_id):
+    cur = mysql.connection.cursor()
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'update_profile':
+            full_name = request.form.get('full_name')
+            phone = request.form.get('phone')
+            currency = request.form.get('currency', 'INR')
+            is_admin = int(request.form.get('is_admin', 0))
+            
+            cur.execute("UPDATE users SET full_name = %s, phone = %s, base_currency = %s, is_admin = %s WHERE id = %s",
+                        (full_name, phone, currency, is_admin, user_id))
+            mysql.connection.commit()
+            flash("User profile updated successfully.", "success")
+            
+            # If editing own account, update session status
+            if user_id == session['user_id']:
+                session['user_name'] = full_name
+                session['is_admin'] = is_admin
+                if is_admin == 0:
+                    cur.close()
+                    return redirect(url_for('dashboard'))
+                    
+        elif action == 'change_password':
+            new_password = request.form.get('new_password')
+            if new_password:
+                cur.execute("UPDATE users SET password_text = %s WHERE id = %s", (new_password, user_id))
+                mysql.connection.commit()
+                flash("User password updated successfully.", "success")
+                
+        return redirect(url_for('admin_user_detail', user_id=user_id))
+    
+    # GET request: fetch user profile
+    cur.execute("SELECT id, full_name, email, phone, password_text, base_currency, is_admin, created_at FROM users WHERE id = %s", [user_id])
+    user_row = cur.fetchone()
+    if not user_row:
+        flash("User not found.", "error")
+        cur.close()
+        return redirect(url_for('admin_dashboard'))
+        
+    user = {
+        'id': user_row[0],
+        'full_name': user_row[1],
+        'email': user_row[2],
+        'phone': user_row[3] or '',
+        'password': user_row[4],
+        'currency': user_row[5],
+        'is_admin': user_row[6],
+        'created_at': user_row[7].strftime('%Y-%m-%d %H:%M') if user_row[7] else '-'
+    }
+    
+    # Fetch user's portfolios
+    cur.execute("SELECT id, name, type, initial_capital, current_pl FROM portfolios WHERE user_id = %s", [user_id])
+    portfolios = []
+    for row in cur.fetchall():
+        portfolios.append({
+            'id': row[0],
+            'name': row[1],
+            'type': row[2],
+            'capital': float(row[3]),
+            'pl': float(row[4]),
+            'total_value': float(row[3] + row[4])
+        })
+        
+    # Fetch recent transactions across user's portfolios
+    cur.execute("""
+        SELECT t.id, t.amount, t.type, t.notes, t.tx_date, p.name as portfolio_name
+        FROM transactions t
+        JOIN portfolios p ON t.portfolio_id = p.id
+        WHERE p.user_id = %s
+        ORDER BY t.tx_date DESC LIMIT 20
+    """, [user_id])
+    transactions = []
+    for row in cur.fetchall():
+        transactions.append({
+            'id': row[0],
+            'amount': float(row[1]),
+            'type': row[2],
+            'notes': row[3] or '-',
+            'date': row[4].strftime('%Y-%m-%d'),
+            'portfolio_name': row[5]
+        })
+        
+    cur.close()
+    return render_template('admin_user_detail.html', user=user, portfolios=portfolios, transactions=transactions)
+
+@app.route('/admin/user/<int:user_id>/delete')
+@admin_required
+def admin_delete_user(user_id):
+    if user_id == session['user_id']:
+        flash("You cannot delete your own admin account.", "error")
+        return redirect(url_for('admin_dashboard'))
+        
+    cur = mysql.connection.cursor()
+    cur.execute("DELETE FROM users WHERE id = %s", [user_id])
+    mysql.connection.commit()
+    cur.close()
+    
+    flash("User and all associated data have been permanently deleted.", "info")
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/portfolios')
+@admin_required
+def admin_portfolios():
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        SELECT p.id, p.name, p.type, p.initial_capital, p.current_pl, u.full_name, u.email
+        FROM portfolios p
+        JOIN users u ON p.user_id = u.id
+        ORDER BY p.id ASC
+    """)
+    portfolios = []
+    for row in cur.fetchall():
+        portfolios.append({
+            'id': row[0],
+            'name': row[1],
+            'type': row[2],
+            'capital': float(row[3]),
+            'pl': float(row[4]),
+            'total_value': float(row[3] + row[4]),
+            'owner_name': row[5],
+            'owner_email': row[6]
+        })
+    cur.close()
+    return render_template('admin_portfolios.html', portfolios=portfolios)
+
+@app.route('/admin/transactions')
+@admin_required
+def admin_transactions():
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        SELECT t.id, t.amount, t.type, t.notes, t.tx_date, p.name as portfolio_name, u.full_name, u.email
+        FROM transactions t
+        JOIN portfolios p ON t.portfolio_id = p.id
+        JOIN users u ON p.user_id = u.id
+        ORDER BY t.tx_date DESC, t.id DESC LIMIT 100
+    """)
+    transactions = []
+    for row in cur.fetchall():
+        transactions.append({
+            'id': row[0],
+            'amount': float(row[1]),
+            'type': row[2],
+            'notes': row[3] or '-',
+            'date': row[4].strftime('%Y-%m-%d'),
+            'portfolio_name': row[5],
+            'owner_name': row[6],
+            'owner_email': row[7]
+        })
+    cur.close()
+    return render_template('admin_transactions.html', transactions=transactions)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

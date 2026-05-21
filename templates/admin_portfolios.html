@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex min-h-screen bg-vault-950">
+    <!-- Sidebar Backdrop Overlay -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-25 hidden lg:hidden"></div>
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-vault-900 border-r border-vault-700 flex flex-col fixed h-full z-30 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div class="p-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber to-amber-dark flex items-center justify-center">
+                    <i class="fa-solid fa-vault text-vault-950 text-sm"></i>
+                </div>
+                <span class="font-display text-lg font-bold tracking-tight">Vaultfolio Admin</span>
+            </div>
+            <button id="close-sidebar-btn" class="lg:hidden text-vault-400 hover:text-white p-2 rounded-xl hover:bg-vault-800 transition-colors" title="Close Menu">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 px-4 py-2 space-y-1">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <i class="fa-solid fa-arrow-left w-5 text-center"></i> User Dashboard
+            </a>
+            <hr class="border-vault-800 my-2">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-item">
+                <i class="fa-solid fa-users w-5 text-center"></i> Users List
+            </a>
+            <a href="{{ url_for('admin_portfolios') }}" class="nav-item active">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i> Portfolios
+            </a>
+            <a href="{{ url_for('admin_transactions') }}" class="nav-item">
+                <i class="fa-solid fa-receipt w-5 text-center"></i> Audit Log
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-vault-700">
+            <a href="{{ url_for('logout') }}" class="flex items-center gap-3 px-4 py-3 text-vault-500 hover:text-loss transition-colors">
+                <i class="fa-solid fa-right-from-bracket w-5 text-center"></i> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 lg:ml-64 p-4 md:p-8 w-full overflow-x-hidden">
+        <!-- Mobile Header Bar -->
+        <div class="flex items-center justify-between p-4 bg-vault-900 border border-vault-800 lg:hidden mb-6 rounded-2xl">
+            <div class="flex items-center gap-3">
+                <button id="mobile-menu-btn" class="text-vault-400 hover:text-white p-2 rounded-xl hover:bg-vault-800 transition-colors" title="Open Menu">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <span class="font-display font-bold tracking-tight text-lg">Vaultfolio Admin</span>
+            </div>
+        </div>
+
+        <header class="flex flex-col sm:flex-row justify-between sm:items-end gap-4 mb-6 md:mb-10">
+            <div>
+                <h1 class="font-display text-3xl font-bold tracking-tight mb-2">Global Portfolios</h1>
+                <p class="text-vault-400 text-sm">Audit all investment trackers across standard and administrator user accounts.</p>
+            </div>
+        </header>
+
+        <!-- Search and Filter Panel -->
+        <div class="glass-card rounded-2xl p-4 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div class="relative w-full md:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-vault-500 text-sm"></i>
+                <input type="text" id="portfolio-search" placeholder="Search portfolios or owners..." class="w-full pl-11 pr-4 py-2 text-sm">
+            </div>
+            
+            <div class="flex gap-3 w-full md:w-auto">
+                <select id="type-filter" class="w-full md:w-48 py-2 text-sm">
+                    <option value="">All Asset Types</option>
+                    <option value="Stock">Stock</option>
+                    <option value="Crypto">Crypto</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Portfolios Table Card -->
+        <div class="glass-card rounded-3xl overflow-hidden shadow-2xl">
+            <div class="px-8 py-6 border-b border-vault-700 bg-vault-900/50 flex justify-between items-center">
+                <h3 class="font-display font-bold">Platform Portfolios</h3>
+                <span class="text-xs text-vault-500 uppercase tracking-widest" id="portfolio-count">{{ portfolios|length }} portfolios</span>
+            </div>
+            
+            {% if portfolios %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm" id="portfolios-table">
+                    <thead>
+                        <tr class="text-vault-400 border-b border-vault-700">
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">ID</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Portfolio Name</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Owner</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Asset Type</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Capital</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">P&L</th>
+                            <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Total Net Worth</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-vault-800">
+                        {% for p in portfolios %}
+                        <tr class="portfolio-row hover:bg-vault-850/40 transition-colors" data-name="{{ p.name }}" data-owner="{{ p.owner_name }} {{ p.owner_email }}" data-type="{{ p.type }}">
+                            <td class="px-6 py-4 text-vault-400">#{{ p.id }}</td>
+                            <td class="px-6 py-4">
+                                <div class="font-bold text-vault-100">{{ p.name }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-vault-200">{{ p.owner_name }}</div>
+                                <div class="text-xs text-vault-500">{{ p.owner_email }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider asset-badge
+                                    {% if p.type == 'Stock' %} bg-blue-500/10 text-blue-400 border border-blue-500/20
+                                    {% elif p.type == 'Crypto' %} bg-purple-500/10 text-purple-400 border border-purple-500/20
+                                    {% elif p.type == 'Cash' %} bg-emerald-500/10 text-emerald-400 border border-emerald-500/20
+                                    {% else %} bg-slate-500/10 text-slate-400 border border-slate-500/20 {% endif %}">
+                                    {{ p.type }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right font-display text-vault-400">
+                                ₹{{ "{:,.2f}".format(p.capital) }}
+                            </td>
+                            <td class="px-6 py-4 text-right font-display font-medium {% if p.pl >= 0 %}text-gain{% else %}text-loss{% endif %}">
+                                ₹{{ "{:,.2f}".format(p.pl) }}
+                            </td>
+                            <td class="px-6 py-4 text-right font-display font-bold text-vault-100">
+                                ₹{{ "{:,.2f}".format(p.total_value) }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="no-results" class="hidden text-center py-12">
+                <i class="fa-solid fa-folder-open text-vault-600 text-4xl mb-3"></i>
+                <p class="text-vault-400">No portfolios match your filters.</p>
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fa-solid fa-folder-open text-vault-600 text-4xl mb-3"></i>
+                <p class="text-vault-400">No portfolios have been created on the platform yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('portfolio-search');
+    const typeFilter = document.getElementById('type-filter');
+    const rows = document.querySelectorAll('.portfolio-row');
+    const countDisplay = document.getElementById('portfolio-count');
+    const noResults = document.getElementById('no-results');
+    const tableElement = document.querySelector('#portfolios-table');
+
+    function filterTable() {
+        const query = searchInput ? searchInput.value.toLowerCase() : '';
+        const selectedType = typeFilter ? typeFilter.value : '';
+        
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const name = row.getAttribute('data-name').toLowerCase();
+            const owner = row.getAttribute('data-owner').toLowerCase();
+            const type = row.getAttribute('data-type');
+
+            const matchesSearch = name.includes(query) || owner.includes(query);
+            const matchesType = !selectedType || type === selectedType;
+
+            if (matchesSearch && matchesType) {
+                row.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                row.classList.add('hidden');
+            }
+        });
+
+        if (countDisplay) {
+            countDisplay.textContent = `${visibleCount} portfolio${visibleCount !== 1 ? 's' : ''}`;
+        }
+
+        if (noResults && tableElement) {
+            if (visibleCount === 0 && rows.length > 0) {
+                noResults.classList.remove('hidden');
+                tableElement.classList.add('hidden');
+            } else {
+                noResults.classList.add('hidden');
+                tableElement.classList.remove('hidden');
+            }
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', filterTable);
+    }
+    if (typeFilter) {
+        typeFilter.addEventListener('change', filterTable);
+    }
+});
+</script>
+{% endblock %}
